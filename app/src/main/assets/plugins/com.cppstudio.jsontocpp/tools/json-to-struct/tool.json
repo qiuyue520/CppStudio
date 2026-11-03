@@ -1,0 +1,7 @@
+{
+  "id": "json-to-struct",
+  "name": "json2struct",
+  "kind": "json-to-go",
+  "icon": "DataObject",
+  "description": "粘贴 JSON，直接生成可编译的 C++17 结构体：嵌套对象自动拆成独立 struct 并按依赖顺序排好，字段类型推断成 std::string / std::int32_t / std::int64_t / double / bool / std::optional / std::vector，粘进 .h/.cpp 即可编译"
+}

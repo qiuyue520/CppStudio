@@ -1,0 +1,38 @@
+# 本地配置（含 SDK 路径）
+local.properties
+
+# Gradle / 构建产物
+.gradle/
+.gradle-home/
+.android-home/
+.cxx/
+build/
+*/build/
+**/build/
+
+# Kotlin 编译缓存
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# 签名密钥（release 私钥放 local.properties 指向的本地路径，不入库）
+*.jks
+*.keystore
+# 例外：运行时给打包产物签名的公共密钥（PEM 格式，apk_packer.kt 使用），必须随仓库分发
+!app/src/main/assets/apkpack/pack.crt
+!app/src/main/assets/apkpack/pack.key
+
+# 备份 / 临时
+*.tar
+_*/
+# 本地辅助脚手架（已由 _*/ 覆盖，显式列出便于阅读）
+/_tools/
+
+# 本地辅助仓库 / 过程产物
+/OpenMinis/
+/.zcode/
+/.hallmark/
+/attachments/

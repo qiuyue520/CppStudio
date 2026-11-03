@@ -1,0 +1,288 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "C",
+  "scopeName": "source.c",
+  "comment": "Hand-written C11 grammar for CppStudio (kept small on purpose; no C++-only keywords).",
+  "patterns": [
+    { "include": "#preprocessor" },
+    { "include": "#comments" },
+    { "include": "#string" },
+    { "include": "#char-literal" },
+    { "include": "#number" },
+    { "include": "#control-keyword" },
+    { "include": "#storage-type" },
+    { "include": "#storage-modifier" },
+    { "include": "#constant-language" },
+    { "include": "#attribute" },
+    { "include": "#member-access" },
+    { "include": "#operator" },
+    { "include": "#function-definition" },
+    { "include": "#function-call" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "preprocessor": {
+      "patterns": [
+        { "include": "#preprocessor-include" },
+        { "include": "#preprocessor-define" },
+        { "include": "#preprocessor-conditional" },
+        { "include": "#preprocessor-diagnostic" },
+        { "include": "#preprocessor-other" },
+        { "include": "#preprocessor-fallback" }
+      ]
+    },
+    "preprocessor-include": {
+      "name": "meta.preprocessor.include.c",
+      "begin": "^[ \\t]*(#)[ \\t]*(include_next|include|import)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.c" },
+        "2": { "name": "keyword.control.import.include.c" }
+      },
+      "end": "$",
+      "patterns": [
+        { "include": "#string" },
+        { "match": "<[^>\\n]+>", "name": "string.quoted.other.lt-gt.include.c" }
+      ]
+    },
+    "preprocessor-define": {
+      "name": "meta.preprocessor.macro.c",
+      "begin": "^[ \\t]*(#)[ \\t]*(define)[ \\t]+([A-Za-z_][A-Za-z0-9_]*)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.c" },
+        "2": { "name": "keyword.control.directive.define.c" },
+        "3": { "name": "entity.name.function.preprocessor.c" }
+      },
+      "end": "(?<!\\\\)$",
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#format-placeholder" },
+        { "include": "#character-escape" },
+        { "include": "#number" }
+      ]
+    },
+    "preprocessor-conditional": {
+      "name": "meta.preprocessor.c",
+      "begin": "^[ \\t]*(#)[ \\t]*(ifdef|ifndef|elifdef|elifndef|if|elif|else|endif|undef)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.c" },
+        "2": { "name": "keyword.control.directive.conditional.c" }
+      },
+      "end": "$",
+      "patterns": [
+        { "match": "\\b(defined)\\b", "name": "keyword.operator.wordlike.defined.c" },
+        { "include": "#number" }
+      ]
+    },
+    "preprocessor-diagnostic": {
+      "name": "meta.preprocessor.c",
+      "begin": "^[ \\t]*(#)[ \\t]*(pragma|error|warning|line|region|endregion)\\b",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.c" },
+        "2": { "name": "keyword.control.directive.c" }
+      },
+      "end": "$",
+      "patterns": [
+        { "include": "#string" },
+        { "include": "#number" }
+      ]
+    },
+    "preprocessor-other": {
+      "name": "meta.preprocessor.c",
+      "begin": "^[ \\t]*(#)[ \\t]*([A-Za-z_][A-Za-z0-9_]*)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.directive.c" },
+        "2": { "name": "keyword.control.directive.c" }
+      },
+      "end": "$"
+    },
+    "preprocessor-fallback": {
+      "name": "meta.preprocessor.c",
+      "match": "^[ \\t]*(#)[^\\n]*$",
+      "captures": {
+        "1": { "name": "punctuation.definition.directive.c" }
+      }
+    },
+    "comments": {
+      "patterns": [
+        { "include": "#comment-documentation" },
+        { "include": "#comment-block" },
+        { "include": "#comment-line" }
+      ]
+    },
+    "comment-documentation": {
+      "name": "comment.block.documentation.c",
+      "begin": "/\\*\\*(?!/)",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.comment.begin.c" }
+      },
+      "end": "\\*/",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.comment.end.c" }
+      },
+      "patterns": [
+        { "include": "#comment-doc-tag" },
+        { "include": "#comment-todo" }
+      ]
+    },
+    "comment-block": {
+      "name": "comment.block.c",
+      "begin": "/\\*",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.comment.begin.c" }
+      },
+      "end": "\\*/",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.comment.end.c" }
+      },
+      "patterns": [
+        { "include": "#comment-todo" }
+      ]
+    },
+    "comment-line": {
+      "name": "comment.line.double-slash.c",
+      "begin": "//",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.comment.c" }
+      },
+      "end": "$",
+      "patterns": [
+        { "include": "#comment-todo" }
+      ]
+    },
+    "comment-todo": {
+      "match": "\\b(TODO|FIXME|XXX|HACK|NOTE)\\b",
+      "name": "comment.todo.c"
+    },
+    "comment-doc-tag": {
+      "match": "@(param|return|returns|brief|author|see|note|warning|throws|since|deprecated|file|date)\\b",
+      "name": "storage.type.class.doxygen.c"
+    },
+    "string": {
+      "name": "string.quoted.double.c",
+      "begin": "((?:u8|u|U|L)?)\"",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.string.begin.c" },
+        "1": { "name": "storage.type.string.prefix.c" }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.c" }
+      },
+      "patterns": [
+        { "include": "#format-placeholder" },
+        { "include": "#character-escape" }
+      ]
+    },
+    "char-literal": {
+      "name": "string.quoted.single.c",
+      "match": "(?:u8|u|U|L)?'(?:\\\\.|[^'\\\\]){1,8}'"
+    },
+    "character-escape": {
+      "match": "\\\\(?:[abefnrtv'\"?\\\\]|x[0-9a-fA-F]+|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|[0-7]{1,3})",
+      "name": "constant.character.escape.c"
+    },
+    "format-placeholder": {
+      "match": "%[-+ #0']*(?:[0-9]+|\\*)?(?:\\.[0-9*]+)?(?:hh|h|ll|l|L|j|z|t|q)?[diouxXeEfFgGaAcspn%]",
+      "name": "constant.other.placeholder.c"
+    },
+    "number": {
+      "patterns": [
+        { "name": "constant.numeric.hex.c", "match": "\\b0[xX][0-9a-fA-F]+(?:[uUlL]+)?" },
+        { "name": "constant.numeric.binary.c", "match": "\\b0[bB][01]+(?:[uUlL]+)?" },
+        { "name": "constant.numeric.octal.c", "match": "\\b0[0-7]+(?:[uUlL]+)?" },
+        { "name": "constant.numeric.float.c", "match": "(?<![A-Za-z0-9_])(?:[0-9]+)?\\.[0-9]+(?:[eE][+-]?[0-9]+)?(?:[fFlL])?\\b" },
+        { "name": "constant.numeric.float.c", "match": "\\b[0-9]+[eE][+-]?[0-9]+(?:[fFlL])?\\b" },
+        { "name": "constant.numeric.integer.c", "match": "\\b[0-9]+(?:[uUlL]+)?" }
+      ]
+    },
+    "control-keyword": {
+      "match": "\\b(if|else|for|while|do|switch|case|default|break|continue|return|goto|sizeof|alignof|_Alignof|_Generic)\\b",
+      "name": "keyword.control.c"
+    },
+    "storage-type": {
+      "patterns": [
+        {
+          "match": "\\b(void|bool|char|short|int|long|float|double|signed|unsigned|_Bool|_Complex|_Imaginary|size_t|ssize_t|ptrdiff_t|intptr_t|uintptr_t|intmax_t|uintmax_t|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|FILE)\\b",
+          "name": "storage.type.primitive.c"
+        },
+        {
+          "match": "\\b(struct|union|enum|typedef)\\b",
+          "name": "storage.type.c"
+        }
+      ]
+    },
+    "storage-modifier": {
+      "patterns": [
+        {
+          "match": "\\b(const|constexpr)\\b",
+          "name": "storage.modifier.const.c"
+        },
+        {
+          "match": "\\b(static|extern|inline|register|auto)\\b",
+          "name": "storage.modifier.storage.c"
+        },
+        {
+          "match": "\\b(volatile|restrict|_Atomic|_Noreturn|_Static_assert|alignas|static_assert|thread_local)\\b",
+          "name": "storage.modifier.specifier.c"
+        }
+      ]
+    },
+    "constant-language": {
+      "match": "\\b(NULL|true|false|EOF|stdin|stdout|stderr|__func__|__FUNCTION__|__LINE__|__FILE__|__DATE__|__TIME__)\\b",
+      "name": "constant.language.c"
+    },
+    "attribute": {
+      "name": "meta.attribute.c",
+      "begin": "\\[\\[(?=[A-Za-z_])",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.attribute.begin.c" }
+      },
+      "end": "\\]\\]",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.attribute.end.c" }
+      },
+      "patterns": [
+        {
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*(::[A-Za-z_][A-Za-z0-9_]*)*\\b",
+          "name": "entity.other.attribute-name.c"
+        }
+      ]
+    },
+    "member-access": {
+      "match": "(?:->|\\.)([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "variable.other.member.c" }
+      }
+    },
+    "operator": {
+      "match": "<<=|>>=|->|\\+\\+|--|\\+=|-=|\\*=|/=|%=|&=|\\|=|\\^=|<<|>>|<=|>=|==|!=|&&|\\|\\||[+\\-*/%<>=!&|^~?:]",
+      "name": "keyword.operator.c"
+    },
+    "function-definition": {
+      "match": "\\b(?!(?:if|for|while|switch|return|sizeof|alignof|do|else|goto|case)\\b)([A-Za-z_][A-Za-z0-9_]*)[ \\t]*\\([^;{}]*\\)[ \\t]*(?=\\{)",
+      "captures": {
+        "1": { "name": "entity.name.function.c" }
+      }
+    },
+    "function-call": {
+      "match": "\\b(?!(?:if|for|while|switch|return|sizeof|alignof|_Alignof|do|else|goto|case|defined)\\b)([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?=\\()",
+      "captures": {
+        "1": { "name": "meta.function-call.c" }
+      }
+    },
+    "punctuation": {
+      "patterns": [
+        { "match": "\\.\\.\\.", "name": "punctuation.section.varargs.c" },
+        { "match": "\\{", "name": "punctuation.section.block.begin.c" },
+        { "match": "\\}", "name": "punctuation.section.block.end.c" },
+        { "match": "\\(", "name": "punctuation.section.parens.begin.c" },
+        { "match": "\\)", "name": "punctuation.section.parens.end.c" },
+        { "match": "\\[", "name": "punctuation.section.brackets.begin.c" },
+        { "match": "\\]", "name": "punctuation.section.brackets.end.c" },
+        { "match": ";", "name": "punctuation.terminator.statement.c" },
+        { "match": ",", "name": "punctuation.separator.comma.c" },
+        { "match": "#", "name": "punctuation.definition.directive.c" }
+      ]
+    }
+  }
+}

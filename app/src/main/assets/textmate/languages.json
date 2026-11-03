@@ -1,0 +1,41 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/c/syntaxes/c.tmLanguage.json",
+      "name": "c",
+      "scopeName": "source.c",
+      "languageConfiguration": "textmate/c/language-configuration.json",
+      "fileTypes": ["c", "h"],
+      "comment": "fileTypes/fileNames are descriptive only; the app maps a file name to its scopeName in cppstudio_application.get_language_scope_name()."
+    },
+    {
+      "grammar": "textmate/cpp/syntaxes/cpp.tmLanguage.json",
+      "name": "cpp",
+      "scopeName": "source.cpp",
+      "languageConfiguration": "textmate/cpp/language-configuration.json",
+      "fileTypes": ["cpp", "cc", "cxx", "c++", "cp", "hpp", "hh", "hxx", "h++", "ipp", "tpp", "inl", "ino", "mm"]
+    },
+    {
+      "grammar": "textmate/cmake/syntaxes/cmake.tmLanguage.json",
+      "name": "cmake",
+      "scopeName": "source.cmake",
+      "languageConfiguration": "textmate/cmake/language-configuration.json",
+      "fileTypes": ["cmake"],
+      "fileNames": ["CMakeLists.txt"]
+    },
+    {
+      "grammar": "textmate/json/syntaxes/json.tmLanguage.json",
+      "name": "json",
+      "scopeName": "source.json",
+      "languageConfiguration": "textmate/json/language-configuration.json",
+      "fileTypes": ["json"]
+    },
+    {
+      "grammar": "textmate/dotenv/syntaxes/dotenv.tmLanguage.json",
+      "name": "dotenv",
+      "scopeName": "source.dotenv",
+      "languageConfiguration": "textmate/dotenv/language-configuration.json",
+      "fileTypes": ["env"]
+    }
+  ]
+}

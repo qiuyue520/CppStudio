@@ -1,0 +1,123 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "CMake",
+  "scopeName": "source.cmake",
+  "comment": "Hand-written CMake grammar for CppStudio: commands, ${variables}, if/endif keywords, comments, strings.",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#bracket-argument" },
+    { "include": "#string" },
+    { "include": "#generator-expression" },
+    { "include": "#variable" },
+    { "include": "#keyword" },
+    { "include": "#command" },
+    { "include": "#command-generic" },
+    { "include": "#constant" },
+    { "include": "#number" },
+    { "include": "#operator" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "include": "#comment-bracket" },
+        { "include": "#comment-line" }
+      ]
+    },
+    "comment-bracket": {
+      "name": "comment.block.cmake",
+      "begin": "#\\[=*\\[",
+      "end": "\\]=*\\]"
+    },
+    "comment-line": {
+      "name": "comment.line.number-sign.cmake",
+      "match": "#[^\\n]*"
+    },
+    "bracket-argument": {
+      "name": "string.unquoted.cmake",
+      "begin": "\\[=*\\[",
+      "end": "\\]=*\\]"
+    },
+    "string": {
+      "name": "string.quoted.double.cmake",
+      "begin": "\"",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.string.begin.cmake" }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.cmake" }
+      },
+      "patterns": [
+        { "include": "#variable" },
+        { "include": "#generator-expression" },
+        { "match": "\\\\.", "name": "constant.character.escape.cmake" }
+      ]
+    },
+    "generator-expression": {
+      "name": "meta.generator-expression.cmake",
+      "begin": "\\$<",
+      "end": ">",
+      "patterns": [
+        { "include": "#variable" },
+        { "include": "#number" }
+      ]
+    },
+    "variable": {
+      "patterns": [
+        { "match": "\\$(ENV|CACHE)\\{[^${}]*\\}", "name": "variable.other.env.cmake" },
+        {
+          "name": "variable.other.cmake",
+          "begin": "\\$\\{",
+          "end": "\\}",
+          "patterns": [
+            { "include": "#variable" }
+          ]
+        }
+      ]
+    },
+    "keyword": {
+      "match": "\\b(if|elseif|else|endif|foreach|endforeach|while|endwhile|function|endfunction|macro|endmacro|block|endblock|return|break|continue)\\b",
+      "name": "keyword.control.cmake"
+    },
+    "command": {
+      "match": "\\b(add_compile_definitions|add_compile_options|add_custom_command|add_custom_target|add_definitions|add_dependencies|add_executable|add_library|add_link_options|add_subdirectory|add_test|aux_source_directory|build_command|cmake_host_system_information|cmake_minimum_required|cmake_parse_arguments|cmake_path|cmake_policy|configure_file|define_property|enable_language|enable_testing|execute_process|export|file|find_file|find_library|find_package|find_path|find_program|get_cmake_property|get_directory_property|get_filename_component|get_property|get_source_file_property|get_target_property|get_test_property|include|include_directories|include_external_msproject|include_guard|include_regular_expression|install|link_directories|link_libraries|list|load_cache|mark_as_advanced|math|message|option|project|remove_definitions|separate_arguments|set|set_directory_properties|set_property|set_source_files_properties|set_target_properties|set_tests_properties|site_name|source_group|string|target_compile_definitions|target_compile_features|target_compile_options|target_include_directories|target_link_directories|target_link_libraries|target_link_options|target_precompile_headers|target_sources|try_compile|try_run|unset|variable_watch)(?=[ \t]*\\()",
+      "name": "support.function.cmake"
+    },
+    "command-generic": {
+      "match": "^[ \\t]*([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(?=\\()",
+      "captures": {
+        "1": { "name": "support.function.cmake" }
+      }
+    },
+    "constant": {
+      "match": "\\b(ON|OFF|TRUE|FALSE|YES|NO|IGNORE|NOTFOUND|ALL|ANY|REQUIRED|QUIET|COMMAND|STATUS|FATAL_ERROR|SEND_ERROR|WARNING|AUTHOR_WARNING|PRIVATE|PUBLIC|INTERFACE|STATIC|SHARED|MODULE|OBJECT|EXCLUDE_FROM_ALL|INSTALL|SYSTEM|BEFORE|AFTER|APPEND|CACHE|PARENT_SCOPE|FORCE)\\b",
+      "name": "constant.language.cmake"
+    },
+    "number": {
+      "patterns": [
+        { "match": "\\b0[xX][0-9a-fA-F]+\\b", "name": "constant.numeric.hex.cmake" },
+        { "match": "\\b[0-9]+\\.[0-9]+\\b", "name": "constant.numeric.float.cmake" },
+        { "match": "\\b[0-9]+\\b", "name": "constant.numeric.integer.cmake" }
+      ]
+    },
+    "operator": {
+      "patterns": [
+        {
+          "match": "\\b(AND|OR|NOT|DEFINED|POLICY|TARGET|TEST|EXISTS|IS_DIRECTORY|IS_ABSOLUTE|IS_READABLE|IS_WRITABLE|IS_EXECUTABLE|MATCHES|LESS_EQUAL|GREATER_EQUAL|STRLESS_EQUAL|STRGREATER_EQUAL|VERSION_LESS_EQUAL|VERSION_GREATER_EQUAL|LESS|GREATER|EQUAL|STRLESS|STRGREATER|STREQUAL|VERSION_LESS|VERSION_GREATER|VERSION_EQUAL|IN_LIST)\\b",
+          "name": "keyword.operator.wordlike.cmake"
+        },
+        {
+          "match": "\\$<|>|&&|\\|\\||=|!",
+          "name": "keyword.operator.cmake"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        { "match": "\\(", "name": "punctuation.section.parens.begin.cmake" },
+        { "match": "\\)", "name": "punctuation.section.parens.end.cmake" }
+      ]
+    }
+  }
+}

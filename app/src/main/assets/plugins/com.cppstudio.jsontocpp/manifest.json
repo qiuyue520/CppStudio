@@ -1,0 +1,9 @@
+{
+  "id": "com.cppstudio.jsontocpp",
+  "name": "JSON → C/C++ 结构体",
+  "version": "1.0.3",
+  "description": "粘贴 JSON 直接生成可编译的 C++17 结构体：字段名保留原 key（非法字符转 snake_case、关键字加下划线），类型自动推断成 std::string / std::int32_t / std::int64_t / double / bool / std::optional / std::vector，嵌套对象拆成独立 struct 并按依赖顺序排好，头部自动补齐用到的 #include。",
+  "author": "CppStudio",
+  "category": "builtin",
+  "min_app_version": 109
+}

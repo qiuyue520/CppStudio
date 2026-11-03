@@ -1,0 +1,102 @@
+package com.jmwl.cppstudio.toolchain.runtime
+
+class proot_command_builder(
+    private val paths: toolchain_runtime_paths
+) {
+    fun base_args(
+        working_dir: String = "/home",
+        include_cppstudio_mount: Boolean = true,
+        extra_mounts: List<proot_bind_mount> = emptyList()
+    ): List<String> {
+        val args = mutableListOf(
+            "--android-profile",
+            "--link2symlink",
+            "--kill-on-exit",
+            "-0",
+            "-r", paths.rootfs_dir.absolutePath,
+            "-b", "/sys",
+            "-b", "/dev",
+            "-b", "/proc",
+            "-w", working_dir.ifBlank { "/home" },
+            "-b", "${paths.home_dir.absolutePath}:/home"
+        )
+
+        if (include_cppstudio_mount) {
+            args += "-b"
+            args += "${paths.cppstudio_dir.absolutePath}:/home/cppstudio"
+        }
+
+        paths.external_storage_dir?.let { external_storage ->
+            if (external_storage.exists()) {
+                args += "-b"
+                args += external_storage.absolutePath
+            }
+        }
+
+        // 若 working_dir 是 host 绝对路径（项目目录），把它 bind 到 guest 内同名路径。
+        // 这样 cmake / clangd 进程能 cd 到该路径，且与 sora LSP 客户端用的 host 路径一致，
+        // 避免 clangd「No active builds contain ...」错误。
+        val normalized_working = working_dir.trimEnd('/')
+        if (normalized_working.startsWith("/data/") || normalized_working.startsWith("/storage/")) {
+            val working_file = java.io.File(normalized_working)
+            if (working_file.exists()) {
+                args += "-b"
+                args += normalized_working
+            }
+        }
+
+        extra_mounts.forEach { mount ->
+            if (mount.source.exists()) {
+                args += "-b"
+                args += mount.as_argument()
+            }
+        }
+
+        return args
+    }
+
+    /**
+     * 非交互命令 shell：不加载 .profile/.bashrc。
+     * 这些文件会输出欢迎横幅，污染 git/go 等工具的 stdout；工具环境已通过 env -i 显式传入。
+     */
+    private fun command_shell(): List<String> {
+        return if (java.io.File(paths.rootfs_dir, "bin/bash").isFile) {
+            listOf("/bin/bash", "--noprofile", "--norc")
+        } else {
+            listOf("/bin/sh")
+        }
+    }
+
+    fun command(
+        shell_command: String,
+        working_dir: String = "/home",
+        include_cppstudio_mount: Boolean = true,
+        extra_mounts: List<proot_bind_mount> = emptyList(),
+        extra_environment: Map<String, String> = emptyMap()
+    ): List<String> {
+        val dollar = '$'
+        val wrapper = "cd -- \"${dollar}1\" && eval \"${dollar}2\""
+        return listOf(paths.proot_file.absolutePath) +
+            base_args(working_dir, include_cppstudio_mount, extra_mounts) +
+            clean_shell_env_args(extra_environment = extra_environment) +
+            command_shell() +
+            listOf(
+                "-c",
+                wrapper,
+                "cppstudio",
+                working_dir.ifBlank { "/home" },
+                shell_command
+            )
+    }
+
+    fun interactive_args(
+        working_dir: String = "/home",
+        include_cppstudio_mount: Boolean = true,
+        extra_mounts: List<proot_bind_mount> = emptyList()
+    ): Array<String> {
+        val shell = if (java.io.File(paths.rootfs_dir, "bin/bash").isFile) "/bin/bash" else "/bin/sh"
+        return (base_args(working_dir, include_cppstudio_mount, extra_mounts) +
+            clean_shell_env_args() +
+            listOf(shell)).toTypedArray()
+    }
+}

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>CppStudio — Android 上的 C/C++ IDE</title>
+  <meta name="description" content="CppStudio 是运行在 Android 上的 C/C++ 集成开发环境：内置 build-base 与 clangd，基于 proot + Alpine rootfs，在手机上本地编辑、用 CMake 构建并运行 C/C++ 项目，还能一键安装第三方库。无需云端，无需 root。">
+  <meta property="og:title" content="CppStudio — Android 上的 C/C++ IDE">
+  <meta property="og:description" content="手机上的 C/C++ IDE。gcc / clang / cmake / clangd 内置，proot + Alpine 工具链，克隆、编辑、构建、运行，一条不少。">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#F7F5FB">
+  <meta name="theme-color" content="#16141B" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <a class="skip" href="#main">跳到内容</a>
+
+  <!-- nav · N9 edge-aligned minimal：词标极左，单一 CTA 极右，中间留白即设计 -->
+  <header class="nav">
+    <div class="nav-inner container">
+      <a class="wordmark" href="#top" aria-label="CppStudio 首页"><b>Cpp</b>Studio <span class="version-chip">v0.1.0</span></a>
+      <a class="btn btn-outline" href="https://github.com/by-yitong/CppStudio/releases/latest" target="_blank" rel="noopener">下载</a>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- hero · H1 marquee：一句陈述占满首屏，横线之下是全页工作流索引 -->
+    <section class="hero" id="top">
+      <div class="container">
+        <h1 class="hero-statement">手机上的 C/C++ IDE。<br>工具链，一条不少。</h1>
+        <div class="hero-rule" aria-hidden="true"></div>
+        <nav class="stage-index" aria-label="工作流阶段">
+          <a href="#stage-1">1.0 克隆</a><span class="sep" aria-hidden="true">·</span>
+          <a href="#stage-2">2.0 编辑</a><span class="sep" aria-hidden="true">·</span>
+          <a href="#stage-3">3.0 构建</a><span class="sep" aria-hidden="true">·</span>
+          <a href="#stage-4">4.0 运行</a>
+        </nav>
+      </div>
+    </section>
+
+    <!-- 1.0 克隆 -->
+    <section class="stage" id="stage-1">
+      <div class="container">
+        <div class="stage-rule" aria-hidden="true"></div>
+        <div class="stage-grid">
+          <div>
+            <p class="stage-no">1.0 · 克隆</p>
+            <h2>把仓库放进手机，或者从模板开始。</h2>
+            <p class="stage-body">从 GitHub、Gitee、GitLab 克隆 C/C++ 项目——HTTPS、SSH、Token、GitHub OAuth 设备码都可以登录，克隆完成自动导入最近项目。根目录有 <code>CMakeLists.txt</code>（或 <code>Makefile</code>）就能打开，工程在子目录里也会自动找一层。</p>
+            <p class="stage-body">从零开始同样就绪：C++ Hello、C Hello、命令行工具、静态库、单元测试、多线程、SQLite、SDL2 窗口八种模板，创建即生成 <code>CMakeLists.txt</code>、<code>.clang-format</code> 与 <code>.gitignore</code>。</p>
+          </div>
+          <div class="stage-visual">
+            <figure class="code-fig">
+              <figcaption class="code-label">terminal</figcaption>
+              <pre><code><span class="c-prompt">$</span> <span class="c-cmd">git clone git@github.com:you/cppstudio-demo.git</span>
+<span class="c-out">Cloning into 'cppstudio-demo'...</span>
+<span class="c-out">remote: Enumerating objects: 128, done.</span>
+<span class="c-prompt">$</span> <span class="caret" aria-hidden="true"></span></code></pre>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2.0 编辑 -->
+    <section class="stage" id="stage-2">
+      <div class="container">
+        <div class="stage-rule" aria-hidden="true"></div>
+        <div class="stage-grid">
+          <div>
+            <p class="stage-no">2.0 · 编辑</p>
+            <h2>clangd 接住每一次按键。</h2>
+            <p class="stage-body">官方语言服务 clangd 完整接入：补全、参数提示、符号高亮、实时诊断、悬浮提示、跳转定义、格式化。它读 CMake 导出的 <code>compile_commands.json</code>，所以补全是语义级的，不是关键字猜的。</p>
+            <p class="stage-body">Sora 编辑器提供标签页、文件树、文件内与全项目搜索、结构大纲——一套为触屏优化的编辑体验。</p>
+          </div>
+          <div class="stage-visual">
+            <figure class="code-fig">
+              <figcaption class="code-label">main.cpp</figcaption>
+              <pre><code><span class="c-kw">#include</span> <span class="c-str">&lt;iostream&gt;</span>
+<span class="c-kw">#include</span> <span class="c-str">&lt;vector&gt;</span>
+
+<span class="c-kw">int</span> <span class="c-fn">main</span>() {
+    std::vector&lt;<span class="c-kw">int</span>&gt; nums{<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>};
+    <span class="c-kw">for</span> (<span class="c-kw">auto</span> n : nums) {
+        std::cout &lt;&lt; n &lt;&lt; <span class="c-str">'\n'</span>;
+    }
+}</code></pre>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3.0 构建 -->
+    <section class="stage" id="stage-3">
+      <div class="container">
+        <div class="stage-rule" aria-hidden="true"></div>
+        <div class="stage-grid">
+          <div>
+            <p class="stage-no">3.0 · 构建</p>
+            <h2>构建发生在手机上，不在云端。</h2>
+            <p class="stage-body">proot + Alpine rootfs 在设备上提供完整的 C/C++ 工具链——build-base、cmake、pkgconf、clang、gdb、git 开箱内置，无需 root 权限，也不依赖云端。构建目录固定为 <code>build/</code>，配置时顺手导出编译数据库。</p>
+            <p class="stage-body">C/C++ 没有 <code>go get</code>，所以有「库管理」：40+ 精选库一键 apk 安装，卡片直接给出 CMake 接法；也支持在 Alpine 仓库里按包名搜索任意包。</p>
+          </div>
+          <div class="stage-visual">
+            <figure class="code-fig">
+              <figcaption class="code-label">terminal</figcaption>
+              <pre><code><span class="c-prompt">$</span> <span class="c-cmd">cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON</span>
+<span class="c-out">-- Configuring done</span>
+<span class="c-prompt">$</span> <span class="c-cmd">cmake --build build --parallel 8</span>
+<span class="c-ok">[100%] Built target cppstudio-demo</span></code></pre>
+            </figure>
+            <figure class="code-fig">
+              <figcaption class="code-label">CMakeLists.txt</figcaption>
+              <pre><code><span class="c-fn">find_package</span>(fmt CONFIG REQUIRED)
+<span class="c-fn">target_link_libraries</span>(cppstudio-demo PRIVATE fmt::fmt)</code></pre>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4.0 运行 -->
+    <section class="stage" id="stage-4">
+      <div class="container">
+        <div class="stage-rule" aria-hidden="true"></div>
+        <div class="stage-grid">
+          <div>
+            <p class="stage-no">4.0 · 运行</p>
+            <h2>写完即运行，不必先打包 APK。</h2>
+            <p class="stage-body">点「运行」，CppStudio 找到构建产物就在终端里启动它——<code>scanf</code>、<code>std::cin</code> 这些标准输入照样能交互，运行参数可以在项目配置里写死。</p>
+            <p class="stage-body">CMake 项目点「测试」走 <code>ctest</code>，Makefile 项目走 <code>make test</code>；构建、测试与工具链日志统一收进输出面板，跑偏了随时停。</p>
+          </div>
+          <div class="stage-visual">
+            <figure class="code-fig">
+              <figcaption class="code-label">terminal</figcaption>
+              <pre><code><span class="c-prompt">$</span> <span class="c-cmd">./build/cppstudio-demo 世界</span>
+<span class="c-ok">Hello, 世界! (cppstudio-demo)</span>
+<span class="c-prompt">$</span> <span class="caret" aria-hidden="true"></span></code></pre>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 插件 · 翻转分栏 -->
+    <section class="plugins" id="plugins">
+      <div class="container">
+        <div class="stage-rule" aria-hidden="true"></div>
+        <div class="plugins-grid">
+          <div class="stage-visual">
+            <figure class="code-fig">
+              <figcaption class="code-label">manifest.json</figcaption>
+              <pre><code>{
+  <span class="c-attr">"id"</span>: <span class="c-str">"com.example.cpp-skills"</span>,
+  <span class="c-attr">"name"</span>: <span class="c-str">"C++ 进阶技能示例"</span>,
+  <span class="c-attr">"version"</span>: <span class="c-str">"1.0.0"</span>,
+  <span class="c-attr">"min_app_version"</span>: <span class="c-num">104</span>
+}</code></pre>
+            </figure>
+          </div>
+          <div class="plugins-copy">
+            <h2>插件是数据，不是代码。</h2>
+            <p>一个 <code>manifest.json</code> 加一个能力目录，就是插件的全部结构——不执行任何代码。当前支持 AI 技能（<code>skills/</code>）与工作区小工具（<code>tools/</code>）扩展，<code>templates/</code> 与 <code>themes/</code> 已预留。</p>
+            <p>在插件市场一键安装，或把目录打成 ZIP 本地导入；装完即用，可随时禁用或卸载。</p>
+            <a class="tlink" href="https://github.com/by-yitong/cppstudio-plugins" target="_blank" rel="noopener">浏览官方插件仓库 →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 规格 · F3 -->
+    <section class="spec" id="spec">
+      <div class="container">
+        <div class="stage-rule" aria-hidden="true"></div>
+        <h2>规格</h2>
+        <table class="spec-table">
+          <caption class="sr-only">CppStudio 规格一览</caption>
+          <tbody>
+            <tr><th scope="row">最新版本</th><td>v0.1.0</td><td>发布在 GitHub Releases</td></tr>
+            <tr><th scope="row">最低系统</th><td>Android 8.0</td><td>minSdk 26</td></tr>
+            <tr><th scope="row">打包架构</th><td>arm64-v8a</td><td>当前原生目标</td></tr>
+            <tr><th scope="row">工具链</th><td>build-base · cmake · clang</td><td>proot + Alpine rootfs 内置</td></tr>
+            <tr><th scope="row">编辑器</th><td>Sora</td><td>标签页 · 文件树 · 全局搜索</td></tr>
+            <tr><th scope="row">语言服务</th><td>clangd</td><td>补全 · 诊断 · 跳转 · 格式化</td></tr>
+            <tr><th scope="row">库管理</th><td>40+ 精选库</td><td>apk 一键安装 · 自动 CMake 接法</td></tr>
+            <tr><th scope="row">开源协议</th><td>MIT</td><td>源码托管在 GitHub</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 下载 -->
+    <section class="download" id="download">
+      <div class="container">
+        <div class="stage-rule" aria-hidden="true"></div>
+        <h2>下一步，装到手机上。</h2>
+        <p>最新 APK 发布在 GitHub Releases，下载安装即可；也可以克隆仓库，运行 <code>./gradlew assembleDebug</code> 自行构建。</p>
+        <div class="cta-row">
+          <a class="btn btn-fill" href="https://github.com/by-yitong/CppStudio/releases/latest" target="_blank" rel="noopener">下载最新版 →</a>
+          <a class="btn btn-outline" href="https://github.com/by-yitong/CppStudio" target="_blank" rel="noopener">查看源码</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- footer · Ft5 statement -->
+  <footer class="foot">
+    <div class="container">
+      <p class="foot-line">把下一次构建，交给你的手机。</p>
+      <div class="foot-meta">
+        <a class="wordmark" href="#top" aria-label="CppStudio 首页"><b>Cpp</b>Studio</a>
+        <nav class="foot-nav" aria-label="页脚链接">
+          <a href="https://github.com/by-yitong/CppStudio" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/by-yitong/cppstudio-plugins" target="_blank" rel="noopener">插件仓库</a>
+          <a href="https://github.com/xiaochenzaine/XCode" target="_blank" rel="noopener">致谢 XCode</a>
+        </nav>
+        <p class="foot-credit">© 2026 · MIT</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- sticky download bar · C4：滚过首屏后出现，抵达下载区后收起 -->
+  <aside class="cta-sticky" id="ctaSticky" aria-label="下载 CppStudio">
+    <p class="cta-sticky-meta">
+      <span class="version-chip">v0.1.0</span>
+      <span class="bar-detail">CppStudio · Android 8.0+ · arm64-v8a</span>
+    </p>
+    <a class="btn btn-fill" href="https://github.com/by-yitong/CppStudio/releases/latest" target="_blank" rel="noopener">下载最新版 →</a>
+  </aside>
+
+  <script>
+    (function () {
+      var bar = document.getElementById('ctaSticky');
+      if (!bar || !('IntersectionObserver' in window)) return;
+
+      var hero = document.querySelector('.hero');
+      var dock = document.querySelector('#download');
+      var foot = document.querySelector('.foot');
+      var pastHero = false, atDock = false, footNear = false;
+
+      function update() {
+        var show = pastHero && !(atDock || footNear);
+        bar.classList.toggle('is-shown', show);
+        bar.classList.toggle('is-hidden', !show);
+      }
+
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { pastHero = !e.isIntersecting; update(); });
+      }, { rootMargin: '-10% 0px 0px 0px' }).observe(hero);
+
+      var dockObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.target === dock) atDock = e.isIntersecting;
+          else footNear = e.isIntersecting;
+        });
+        update();
+      }, { threshold: 0.05 });
+      dockObserver.observe(dock);
+      dockObserver.observe(foot);
+    })();
+  </script>
+</body>
+</html>

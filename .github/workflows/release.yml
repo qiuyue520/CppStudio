@@ -1,0 +1,172 @@
+name: Release APK
+
+# 推送 v* tag 自动构建签名 Release APK 并创建 GitHub Release。
+#
+# 签名信息读仓库 Secrets（加密存储，日志自动打码），密钥文件本身绝不入库：
+#   GOSTUDIO_KEYSTORE_BASE64   发布签名 jks 的 base64
+#   GOSTUDIO_KEYSTORE_ALIAS    key 别名
+#   GOSTUDIO_KEY_PASSWORD      key 密码
+#   GOSTUDIO_STORE_PASSWORD    keystore 密码
+#
+# 可选 Webhook 通知（QQ 推送服务 qiqi），地址存 Secret WEBHOOK_URL，未配置则跳过：
+#   成功 -> 先 JSON {msg_type:"markdown"} 发更新日志，再 multipart 直传 APK 文件；
+#           成功与否看响应体 StatusCode（服务端可能在 QQ 拉取失败时仍回 HTTP 200）
+#   失败 -> application/json POST：{msg_type:"text", content:{text: 标签+日志末尾+run 链接}}
+#
+# 免构建测试（改通知逻辑时用，不用重新打包）：
+#   Actions 页面手动 Run workflow，apk_url 填一个现成 APK 地址（如某个 Release 的资产
+#   直链），即跳过构建/发布，只跑通知链路，1 分钟出结果。
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: "直接用这个 APK 测试通知（跳过构建与发布，留空则忽略）"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # 非空 = 免构建测试模式：只测通知链路
+      TEST_APK_URL: ${{ github.event.inputs.apk_url }}
+    steps:
+      # ===== 正式模式：构建 + 发布 =====
+      # fetch-depth 0：更新日志要取上个 tag 到本 tag 的完整提交记录
+      - uses: actions/checkout@v4
+        if: env.TEST_APK_URL == ''
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        if: env.TEST_APK_URL == ''
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: env.TEST_APK_URL == ''
+
+      # oniguruma 原生模块指定 CMake 4.3.0：runner SDK/自带版本都没有，用 pip 装进 PATH
+      - name: 安装 CMake 4.3.0
+        if: env.TEST_APK_URL == ''
+        run: |
+          python3 -m pip install --user 'cmake==4.3.0'
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: 解码签名密钥并生成 local.properties
+        if: env.TEST_APK_URL == ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.GOSTUDIO_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.GOSTUDIO_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.GOSTUDIO_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.GOSTUDIO_STORE_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > gostudio-release.keystore
+          printf 'GOSTUDIO_KEYSTORE_PATH=gostudio-release.keystore\nGOSTUDIO_KEY_ALIAS=%s\nGOSTUDIO_KEY_PASSWORD=%s\nGOSTUDIO_STORE_PASSWORD=%s\n' \
+            "$KEY_ALIAS" "$KEY_PASSWORD" "$STORE_PASSWORD" > local.properties
+
+      - name: 构建 Release APK
+        if: env.TEST_APK_URL == ''
+        run: |
+          set -o pipefail
+          ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee build.log
+
+      # ===== 整理产物与版本信息（两种模式都跑）=====
+      # 放在构建之后：正式模式拷贝刚构建的 APK；测试模式下载现成 APK（无需 checkout）
+      - name: 准备产物与版本信息
+        id: apk
+        run: |
+          if [ -n "$TEST_APK_URL" ]; then
+            curl -fsSL --retry 2 --max-time 600 -o apk-to-send.apk "$TEST_APK_URL"
+            ls -la apk-to-send.apk
+            echo "file=apk-to-send.apk" >> "$GITHUB_OUTPUT"
+            echo "version_name=test" >> "$GITHUB_OUTPUT"
+            echo "version_code=0" >> "$GITHUB_OUTPUT"
+            echo "tag=notify-test" >> "$GITHUB_OUTPUT"
+            printf '## 更新内容\n（通知链路测试，非正式发布）\n' > release_body.md
+          else
+            TAG="${GITHUB_REF_NAME}"
+            cp app/build/outputs/apk/release/app-release.apk "GoStudio-${TAG}.apk"
+            NAME=$(sed -n 's/.*"versionName": *"\([^"]*\)".*/\1/p' app/build/outputs/apk/release/output-metadata.json)
+            CODE=$(sed -n 's/.*"versionCode": *\([0-9]*\).*/\1/p' app/build/outputs/apk/release/output-metadata.json)
+            echo "file=GoStudio-${TAG}.apk" >> "$GITHUB_OUTPUT"
+            echo "version_name=${NAME}" >> "$GITHUB_OUTPUT"
+            echo "version_code=${CODE}" >> "$GITHUB_OUTPUT"
+            echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+            # 更新日志取上个 tag..本 tag 的 feat/fix 等提交（过滤 chore/ci），
+            # 提交信息写详细即为更新日志；取不到时退回占位文本
+            PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+            LOG_RANGE="${PREV_TAG:+"$PREV_TAG.."}$TAG"
+            CHANGELOG=$(git log --no-merges --invert-grep --grep='^chore: ' --grep='^ci: ' \
+              --format='- %s%n%n%b' "$LOG_RANGE" | sed -e 's/[[:space:]]*$//')
+            [ -n "$CHANGELOG" ] || CHANGELOG='（发布后在此补充）'
+            printf '## 更新内容\n\n%s\n\n## 安装包\n- GoStudio-%s.apk\n- versionName: %s\n- versionCode: %s\n' \
+              "$CHANGELOG" "$TAG" "$NAME" "$CODE" > release_body.md
+          fi
+
+      - name: 创建 Release 并上传 APK
+        if: env.TEST_APK_URL == ''
+        uses: softprops/action-gh-release@v2
+        with:
+          name: GoStudio ${{ github.ref_name }}
+          files: ${{ steps.apk.outputs.file }}
+          body_path: release_body.md
+
+      # ===== 通知（两种模式都跑）=====
+      # continue-on-error：通知失败不把 run 标红（构建/发布本身已成功），
+      # 也避免误触发下面的「打包失败」通知
+      - name: Webhook 通知（成功：直传 APK + 更新日志）
+        if: success() && env.WEBHOOK_URL != ''
+        continue-on-error: true
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          APK_FILE: ${{ steps.apk.outputs.file }}
+          VERSION_NAME: ${{ steps.apk.outputs.version_name }}
+          VERSION_CODE: ${{ steps.apk.outputs.version_code }}
+          TAG: ${{ steps.apk.outputs.tag }}
+        run: |
+          # QQ 侧文件名用 版本名+versionCode，方便区分安装包
+          QQ_NAME="GoStudio-v${VERSION_NAME}+${VERSION_CODE}.apk"
+          cp "$APK_FILE" "$QQ_NAME"
+          NOTES=$(printf '%s\n\n发布页: https://github.com/%s/releases/tag/%s' "$(cat release_body.md)" "$GITHUB_REPOSITORY" "$TAG")
+          DL_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${APK_FILE}"
+
+          # 1) 更新日志走 markdown 消息（release_body.md 本身就是 md，QQ 渲染成标题/列表）
+          jq -n --arg text "$NOTES" '{msg_type:"markdown", content:{text:$text}}' > webhook_md.json
+          MD_RESP=$(curl -fsS --max-time 60 -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' --data-binary @webhook_md.json)
+          echo "markdown 响应: ${MD_RESP}"
+
+          # 2) APK 文件直传（更新日志已单独发，不再附 text）
+          # runner 上行国内带宽慢，给足超时；成功与否看响应体 StatusCode
+          RESP=$(curl -sS --connect-timeout 20 --max-time 1800 --retry 1 -X POST "$WEBHOOK_URL" \
+            -F "file=@${QQ_NAME}" -F "type=file")
+          echo "webhook 响应: ${RESP}"
+          if ! printf '%s' "$RESP" | grep -q '"StatusCode":0'; then
+            echo "APK 直传未送达（响应非 success），降级为文字通知"
+            FALLBACK=$(printf 'GoStudio %s 打包成功，APK 直传 QQ 失败，请用链接下载：\n%s\n%s' "$TAG" "$DL_URL" "$NOTES")
+            jq -n --arg text "$FALLBACK" '{msg_type:"text", content:{text:$text}}' > webhook_fallback.json
+            curl -fsS --max-time 60 -X POST "$WEBHOOK_URL" \
+              -H 'Content-Type: application/json' --data-binary @webhook_fallback.json
+          fi
+
+      - name: Webhook 通知（失败：错误日志）
+        if: failure() && env.WEBHOOK_URL != ''
+        continue-on-error: true
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        run: |
+          ERROR_TEXT=$(tail -n 50 build.log 2>/dev/null || echo "构建早期失败，详见运行日志")
+          FAIL_TEXT=$(printf 'GoStudio 打包失败 %s\n%s\n日志: https://github.com/%s/actions/runs/%s' "$GITHUB_REF_NAME" "$ERROR_TEXT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")
+          jq -n --arg text "$FAIL_TEXT" '{msg_type:"text", content:{text:$text}}' > webhook_fail.json
+          curl -fsS --max-time 60 -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            --data-binary @webhook_fail.json
