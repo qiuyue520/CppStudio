@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.jmwl.cppstudio.editor.core"
+    namespace = "com.xiaonai.cppstudio.editor.core"
     compileSdk = 36
 
     defaultConfig {

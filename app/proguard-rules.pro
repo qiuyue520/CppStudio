@@ -2,8 +2,8 @@
 # 思路：自有代码整体保留（gson/JSON 反射模型密集：编辑器/AI/项目/插件配置，
 # 逐个排查成本高且易漏），裁剪收益来自三方库（compose/icons 等未用代码）。
 
-# 自有代码（含全部 com.jmwl.cppstudio.* 模块）：不混淆不裁剪
--keep class com.jmwl.cppstudio.** { *; }
+# 自有代码（含全部 com.xiaonai.cppstudio.* 模块）：不混淆不裁剪
+-keep class com.xiaonai.cppstudio.** { *; }
 
 # 运行时 APK 打包依赖 apksig：运行时直接调用且内部有反射，整体保留
 -keep class com.android.apksig.** { *; }

@@ -37,7 +37,7 @@ web/admin/           管理后台静态页（embed 内嵌，单二进制分发�
   "android_version": "15", "app_version": "1.0.7",
   "contact": "me@qq.com", "comment": "打开编辑器就崩了",
   "crash_log": "IllegalStateException: ...",
-  "crash_stack": "java.lang.IllegalStateException: ...\n\tat com.jmwl.cppstudio..."
+  "crash_stack": "java.lang.IllegalStateException: ...\n\tat com.xiaonai.cppstudio..."
 }
 // → {"report_id":1,"error_type_id":1,"fingerprint":"f59…","occurrence_count":2,"first_report":false}
 ```

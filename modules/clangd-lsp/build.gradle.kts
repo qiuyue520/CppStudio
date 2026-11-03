@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.jmwl.cppstudio.lsp.clangd"
+    namespace = "com.xiaonai.cppstudio.lsp.clangd"
     compileSdk = 36
 
     defaultConfig {

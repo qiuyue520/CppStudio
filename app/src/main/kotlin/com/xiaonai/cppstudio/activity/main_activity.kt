@@ -1,0 +1,707 @@
+package com.xiaonai.cppstudio.activity
+
+import android.content.Intent
+import android.os.Bundle
+import com.xiaonai.cppstudio.ui.toast.app_toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
+import com.xiaonai.cppstudio.project.project_manager
+import com.xiaonai.cppstudio.project.recent_project_info
+import com.xiaonai.cppstudio.toolchain.git_manager
+import com.xiaonai.cppstudio.toolchain.install_build_base
+import com.xiaonai.cppstudio.toolchain.install_clang_format
+import com.xiaonai.cppstudio.toolchain.install_clangd
+import com.xiaonai.cppstudio.toolchain.install_cmake
+import com.xiaonai.cppstudio.toolchain.install_cpp_toolchain
+import com.xiaonai.cppstudio.toolchain.install_gdb
+import com.xiaonai.cppstudio.toolchain.install_git
+import com.xiaonai.cppstudio.toolchain.toolchain_manager
+import com.xiaonai.cppstudio.ui.screens.main.main_navigation
+import com.xiaonai.cppstudio.ui.screens.main.main_tools_install_status
+import com.xiaonai.cppstudio.ui.screens.main.recent_project
+import com.xiaonai.cppstudio.ui.screens.main.toolchain_action
+import com.xiaonai.cppstudio.ui.screens.main.toolchain_custom_install_request
+import com.xiaonai.cppstudio.ui.screens.main.toolchain_trigger
+import com.xiaonai.cppstudio.ui.theme.app_theme_preset
+import com.xiaonai.cppstudio.ui.theme.app_theme_provider
+import com.xiaonai.cppstudio.ui.theme.app_theme_type
+import com.xiaonai.cppstudio.ui.theme.theme_manager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.documentfile.provider.DocumentFile
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+
+class main_activity : ComponentActivity() {
+    private var recent_projects by mutableStateOf<List<recent_project>>(emptyList())
+    private var toolchain_status by mutableStateOf(main_tools_install_status())
+    private var current_theme by mutableStateOf(app_theme_type.SYSTEM)
+    private var current_theme_preset by mutableStateOf(app_theme_preset.LAVENDER)
+    private var custom_theme_accent by mutableStateOf(0xFFA78BFA.toInt())
+    private var scale_value by mutableStateOf(1f)
+    private var toolchain_tasks by mutableStateOf<List<toolchain_trigger>>(emptyList())
+    private var custom_toolchain_dialog by mutableStateOf<toolchain_custom_install_request?>(null)
+
+    // 其他应用（QQ 等）「用其他应用打开」传进来的 zip：启动后直接进入导入流程
+    private var external_zip by mutableStateOf<Uri?>(null)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        enableEdgeToEdge()
+        if (intent?.action == Intent.ACTION_VIEW) {
+            intent.data?.let { external_zip = it }
+        }
+        setContent {
+            app_theme_provider {
+                // 启动后静默检查更新（仅发现新版本时弹窗）
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val update_controller = androidx.compose.runtime.remember {
+                    com.xiaonai.cppstudio.update.app_update_controller(context)
+                }
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    kotlinx.coroutines.delay(2500)
+                    update_controller.check(auto = true)
+                }
+                com.xiaonai.cppstudio.ui.dialogs.main.app_update_dialog(
+                    controller = update_controller,
+                    on_dismiss = { update_controller.reset() }
+                )
+
+                main_navigation(
+                    recent_projects = recent_projects,
+                    toolchain_status = toolchain_status,
+                    current_theme = current_theme,
+                    current_theme_preset = current_theme_preset,
+                    custom_theme_accent = custom_theme_accent,
+                    scale_value = scale_value,
+                    toolchain_tasks = toolchain_tasks,
+                    custom_toolchain_dialog = custom_toolchain_dialog,
+                    on_back_to_background = { moveTaskToBack(true) },
+                    on_terminal = ::open_terminal,
+                    on_project_click = ::open_recent_project,
+                    on_project_copy = ::copy_project,
+                    on_project_delete = ::delete_project,
+                    on_project_export = ::export_project,
+                    on_create_project = ::create_project,
+                    on_import_project = ::import_project,
+                    on_import_project_zip = ::import_project_zip,
+                    initial_import_zip = external_zip,
+                    on_clone_project = ::clone_github_project,
+                    on_toolchain_trigger_change = { trigger ->
+                        toolchain_tasks = if (trigger != null) {
+                            toolchain_tasks + trigger
+                        } else {
+                            toolchain_tasks.drop(1)
+                        }
+                    },
+                    on_custom_toolchain_dialog_change = { custom_toolchain_dialog = it },
+                    on_theme_change = ::set_theme,
+                    on_theme_preset_change = ::set_theme_preset,
+                    on_custom_theme_accent_change = ::set_custom_theme_accent,
+                    on_scale_change = ::set_scale,
+                    on_run_toolchain_task = ::run_toolchain_task,
+                    on_toolchain_task_success = ::on_toolchain_task_success
+                )
+            }
+        }
+
+        load_initial_data()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 从编辑器返回时刷新最近项目（项目图标等配置可能已变化）
+        lifecycleScope.launch { reload_recent_projects() }
+    }
+
+    private fun load_initial_data() {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                toolchain_manager.cleanup_removed_toolchain_environment()
+            }
+            reload_recent_projects()
+            refresh_toolchain_status()
+            current_theme = theme_manager.theme.value
+            current_theme_preset = theme_manager.preset.value
+            custom_theme_accent = theme_manager.custom_accent.value
+            scale_value = theme_manager.scale.value
+        }
+    }
+
+    private suspend fun reload_recent_projects() {
+        recent_projects = project_manager.get_recent_projects().map { it.to_ui_recent_project() }
+    }
+
+    private suspend fun refresh_toolchain_status() {
+        toolchain_status = withContext(Dispatchers.IO) {
+            val cpp = toolchain_manager.installed_cpp()
+            val packages = toolchain_manager.installed_packages()
+            main_tools_install_status(
+                compiler_installed = cpp != null,
+                compiler_version = cpp?.version.orEmpty(),
+                cmake_installed = toolchain_manager.is_cmake_installed(),
+                cmake_version = packages["cmake"].orEmpty(),
+                clangd_installed = toolchain_manager.is_clangd_installed(),
+                clang_format_installed = toolchain_manager.is_clang_format_installed(),
+                gdb_installed = toolchain_manager.is_gdb_installed(),
+                git_installed = toolchain_manager.is_git_installed(),
+                installed_libraries = com.xiaonai.cppstudio.libraries.library_manager
+                    .installed_count(packages)
+            )
+        }
+    }
+
+    private fun open_terminal() {
+        startActivity(Intent(this, terminal_activity::class.java))
+    }
+
+    private fun set_theme(theme: app_theme_type) {
+        theme_manager.set_theme(this, theme)
+        current_theme = theme
+    }
+
+
+    private fun set_theme_preset(preset: app_theme_preset) {
+        theme_manager.set_preset(this, preset)
+        current_theme_preset = preset
+    }
+
+    private fun set_custom_theme_accent(argb: Int) {
+        theme_manager.set_custom_accent(this, argb)
+        current_theme_preset = app_theme_preset.CUSTOM
+        custom_theme_accent = argb or 0xFF000000.toInt()
+    }
+
+    private fun set_scale(scale: Float) {
+        theme_manager.set_scale(this, scale)
+        scale_value = scale
+    }
+
+    private fun open_recent_project(project: recent_project) {
+        lifecycleScope.launch {
+            val project_dir = File(project.path)
+            if (!project_dir.exists() || !project_dir.isDirectory) {
+                project_manager.remove_recent_project(project.path)
+                reload_recent_projects()
+                app_toast.show(this@main_activity, "项目不存在，已从最近项目移除", app_toast.LENGTH_LONG)
+                return@launch
+            }
+
+            project_manager.ensure_project_config(project.path)
+            val result = project_manager.add_recent_project(project.path)
+            result.onSuccess { info ->
+                reload_recent_projects()
+                open_editor(info.name, info.path)
+            }.onFailure { error ->
+                app_toast.show(this@main_activity, "打开失败: ${error.message}", app_toast.LENGTH_LONG)
+            }
+        }
+    }
+
+    /** 复制项目到同目录副本（name-copy、name-copy-2 递增），成功后加入最近列表。 */
+    private fun copy_project(project: recent_project) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val source = File(project.path)
+                    if (!source.isDirectory) throw IllegalArgumentException("项目目录不存在")
+                    val parent = source.parentFile ?: throw IllegalArgumentException("无法定位父目录")
+                    var target = File(parent, source.name + "-copy")
+                    var index = 2
+                    while (target.exists()) {
+                        target = File(parent, source.name + "-copy-$index")
+                        index++
+                    }
+                    source.copyRecursively(target, overwrite = false)
+                    target
+                }
+            }
+            result.fold(
+                onSuccess = { target ->
+                    project_manager.add_recent_project(target.absolutePath)
+                    reload_recent_projects()
+                    app_toast.show(this@main_activity, "已复制到 ${target.name}", app_toast.LENGTH_SHORT)
+                },
+                onFailure = { error ->
+                    app_toast.show(this@main_activity, "复制失败：${error.message}", app_toast.LENGTH_LONG)
+                }
+            )
+        }
+    }
+
+    /** 删除项目目录并移出最近列表。 */
+    private fun delete_project(project: recent_project) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val dir = File(project.path)
+                    if (dir.isDirectory) {
+                        if (!dir.deleteRecursively()) throw IllegalStateException("目录删除失败")
+                    }
+                }
+            }
+            project_manager.remove_recent_project(project.path)
+            reload_recent_projects()
+            result.fold(
+                onSuccess = {
+                    app_toast.show(this@main_activity, "已删除 ${project.name}", app_toast.LENGTH_SHORT)
+                },
+                onFailure = { error ->
+                    app_toast.show(this@main_activity, "目录删除失败：${error.message}（已移出最近列表）", app_toast.LENGTH_LONG)
+                }
+            )
+        }
+    }
+
+    /** 导出项目为 ZIP 到用户选择的 SAF 目标。 */
+    private fun export_project(project: recent_project, uri: Uri) {
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    val root = File(project.path)
+                    if (!root.isDirectory) throw IllegalArgumentException("项目目录不存在")
+                    contentResolver.openOutputStream(uri)?.use { output ->
+                        ZipOutputStream(output.buffered()).use { zip ->
+                            root.walkTopDown().filter { it.isFile }.forEach { file ->
+                                val entry_name = file.relativeTo(root).invariantSeparatorsPath
+                                zip.putNextEntry(ZipEntry(entry_name))
+                                file.inputStream().use { it.copyTo(zip) }
+                                zip.closeEntry()
+                            }
+                        }
+                    } ?: throw IllegalStateException("无法打开导出目标")
+                }
+            }
+            result.fold(
+                onSuccess = {
+                    app_toast.show(this@main_activity, "已导出 ${project.name}.zip", app_toast.LENGTH_SHORT)
+                },
+                onFailure = { error ->
+                    app_toast.show(this@main_activity, "导出失败：${error.message}", app_toast.LENGTH_LONG)
+                }
+            )
+        }
+    }
+
+    private fun create_project(
+        project_name: String,
+        template_id: String,
+        app_name: String,
+        app_package: String
+    ) {
+        lifecycleScope.launch {
+            val result = project_manager.create_project(
+                name = project_name,
+                template_id = template_id,
+                app_name = app_name,
+                package_name = app_package
+            )
+            result.onSuccess { project_dir ->
+                project_manager.add_recent_project(project_dir.absolutePath)
+                reload_recent_projects()
+                app_toast.show(this@main_activity, "项目已创建: ${project_dir.name}", app_toast.LENGTH_SHORT)
+                open_editor(project_dir.name, project_dir.absolutePath)
+            }.onFailure { error ->
+                app_toast.show(this@main_activity, "创建失败: ${error.message}", app_toast.LENGTH_LONG)
+            }
+        }
+    }
+
+    private suspend fun clone_github_project(
+        repository_url: String,
+        on_log: (String) -> Unit,
+        on_progress: (Int) -> Unit
+    ): Boolean {
+        if (!toolchain_status.git_installed) {
+            on_log("Git 未安装，请先到「工具」页安装 Git")
+            return false
+        }
+
+        val url = repository_url.trim()
+        val https_pattern = Regex(
+            """^https?://([\w.-]+)(?::\d+)?/(?:[\w.-]+/)*([\w.-]+?)(?:\.git)?/?$""",
+            RegexOption.IGNORE_CASE
+        )
+        val ssh_pattern = Regex(
+            """^(?:ssh://)?git@([\w.-]+)(?::\d+)?[/:](?:[\w.-]+/)*([\w.-]+?)(?:\.git)?$""",
+            RegexOption.IGNORE_CASE
+        )
+        val match = https_pattern.find(url) ?: ssh_pattern.find(url)
+        if (match == null) {
+            on_log("仓库地址无效：$url")
+            return false
+        }
+
+        val raw_name = match.groupValues[2].ifBlank { "github-project" }
+        val base_name = raw_name.replace(Regex("[^A-Za-z0-9._-]"), "_")
+            .replace(Regex("^[.]*"), "")
+            .ifBlank { "github-project" }
+        val projects_root = project_manager.default_projects_dir()
+        val project_dir = withContext(Dispatchers.IO) {
+            var candidate = File(projects_root, base_name)
+            var index = 1
+            while (candidate.exists()) {
+                candidate = File(projects_root, "${base_name}-${index++}")
+            }
+            candidate
+        }
+
+        on_log("仓库：$url")
+        on_log("目标：${project_dir.name}")
+        on_progress(8)
+        val (clone_ok, clone_output) = git_manager.clone_repository(
+            projects_root = projects_root.absolutePath,
+            repository_url = url,
+            destination_name = project_dir.name,
+            on_command_log = on_log
+        )
+        if (!clone_ok) {
+            on_progress(100)
+            on_log(clone_output.ifBlank { "克隆失败" })
+            withContext(Dispatchers.IO) { project_dir.deleteRecursively() }
+            return false
+        }
+
+        on_progress(70)
+        val configured = withContext(Dispatchers.IO) {
+            project_manager.ensure_project_config(project_dir.absolutePath)
+        }
+        configured.onFailure { error ->
+            on_progress(100)
+            on_log(error.message ?: "仓库根目录缺少 CMakeLists.txt / Makefile，不是可打开的 C/C++ 项目")
+            withContext(Dispatchers.IO) { project_dir.deleteRecursively() }
+            return false
+        }
+
+        on_progress(88)
+        val recent = project_manager.add_recent_project(project_dir.absolutePath)
+        recent.onFailure { error ->
+            on_progress(100)
+            on_log("项目加入最近列表失败: ${error.message}")
+            return false
+        }
+
+        on_progress(100)
+        reload_recent_projects()
+        on_log("克隆完成：${project_dir.name}")
+        app_toast.show(this, "项目已克隆: ${project_dir.name}", app_toast.LENGTH_SHORT)
+        open_editor(project_dir.name, project_dir.absolutePath, auto_tidy = true)
+        return true
+    }
+
+    /**
+     * 从文件管理器（SAF OpenDocumentTree）选中的目录导入项目：
+     * 整目录复制到内部 projects 根（proot 需要内部存储路径），再走与克隆一致的打开流程。
+     */
+    private suspend fun import_project(
+        uri: Uri,
+        on_log: (String) -> Unit,
+        on_progress: (Int) -> Unit
+    ): Boolean {
+        val projects_root = project_manager.default_projects_dir()
+
+        on_progress(3)
+        val root = withContext(Dispatchers.IO) {
+            runCatching { DocumentFile.fromTreeUri(this@main_activity, uri) }.getOrNull()
+        } ?: run {
+            on_log("无法读取所选目录")
+            on_progress(100)
+            return false
+        }
+
+        val base_name = withContext(Dispatchers.IO) {
+            root.name.orEmpty()
+                .replace(Regex("[^A-Za-z0-9._-]"), "_")
+                .replace(Regex("^[.]*"), "")
+                .ifBlank { "imported-project" }
+        }
+        // 提前校验构建文件，避免复制完才发现不是 C/C++ 工程
+        val has_build_file = withContext(Dispatchers.IO) {
+            root.listFiles().any { !it.isDirectory && it.name in setOf("CMakeLists.txt", "Makefile", "makefile", "GNUmakefile") }
+        }
+        if (!has_build_file) {
+            on_log("所选目录根下没有 CMakeLists.txt 或 Makefile，请选择 C/C++ 工程的根目录")
+            on_progress(100)
+            return false
+        }
+
+        val project_dir = withContext(Dispatchers.IO) {
+            var candidate = File(projects_root, base_name)
+            var index = 1
+            while (candidate.exists()) {
+                candidate = File(projects_root, "${base_name}-${index++}")
+            }
+            candidate
+        }
+        on_log("导入：$base_name")
+        on_log("目标：${project_dir.name}")
+        on_progress(8)
+
+        val copy_result = withContext(Dispatchers.IO) {
+            runCatching {
+                var total = 0
+                fun count_files(dir: DocumentFile) {
+                    dir.listFiles().forEach { child ->
+                        if (child.isDirectory) count_files(child) else total++
+                    }
+                }
+                count_files(root)
+                on_log("共 $total 个文件")
+
+                var copied = 0
+                fun copy_tree(source: DocumentFile, target: File) {
+                    if (!target.exists() && !target.mkdirs()) {
+                        throw IllegalStateException("无法创建目录 ${target.name}")
+                    }
+                    source.listFiles().forEach { child ->
+                        val child_name = child.name ?: return@forEach
+                        if (child.isDirectory) {
+                            copy_tree(child, File(target, child_name))
+                        } else {
+                            val output_file = File(target, child_name)
+                            contentResolver.openInputStream(child.uri)?.use { input ->
+                                output_file.outputStream().use { output -> input.copyTo(output) }
+                            } ?: throw IllegalStateException("无法读取文件 $child_name")
+                            copied++
+                            on_progress(10 + (85.0 * copied / total.coerceAtLeast(1)).toInt())
+                        }
+                    }
+                }
+                copy_tree(root, project_dir)
+            }
+        }
+        if (copy_result.isFailure) {
+            on_progress(100)
+            on_log("复制失败：${copy_result.exceptionOrNull()?.message ?: "未知错误"}")
+            withContext(Dispatchers.IO) { project_dir.deleteRecursively() }
+            return false
+        }
+
+        on_progress(97)
+        val configured = withContext(Dispatchers.IO) {
+            project_manager.ensure_project_config(project_dir.absolutePath)
+        }
+        configured.onFailure { error ->
+            on_progress(100)
+            on_log(error.message ?: "项目配置初始化失败")
+            withContext(Dispatchers.IO) { project_dir.deleteRecursively() }
+            return false
+        }
+
+        val recent = project_manager.add_recent_project(project_dir.absolutePath)
+        recent.onFailure { error ->
+            on_progress(100)
+            on_log("项目加入最近列表失败: ${error.message}")
+            return false
+        }
+
+        on_progress(100)
+        reload_recent_projects()
+        on_log("导入完成：${project_dir.name}")
+        app_toast.show(this, "项目已导入: ${project_dir.name}", app_toast.LENGTH_SHORT)
+        // 导入的项目依赖未缓存，打开后自动 go mod tidy（与克隆一致）
+        open_editor(project_dir.name, project_dir.absolutePath, auto_tidy = true)
+        return true
+    }
+
+    /**
+     * 从文件管理器选中的 ZIP 压缩包导入项目：
+     * 解包到内部 projects 根（唯一顶层目录视为包裹目录自动剥离），其余流程与目录导入一致。
+     */
+    private suspend fun import_project_zip(
+        uri: Uri,
+        on_log: (String) -> Unit,
+        on_progress: (Int) -> Unit
+    ): Boolean {
+        val projects_root = project_manager.default_projects_dir()
+
+        on_progress(3)
+        // 第一遍流式扫描：统计文件数、校验构建文件、识别包裹目录
+        val scanned = withContext(Dispatchers.IO) {
+            runCatching {
+                val names = mutableListOf<String>()
+                contentResolver.openInputStream(uri)?.use { input ->
+                    ZipInputStream(input.buffered()).use { zip ->
+                        while (true) {
+                            val entry = zip.nextEntry ?: break
+                            if (!entry.isDirectory) names.add(entry.name)
+                            zip.closeEntry()
+                        }
+                    }
+                } ?: throw IllegalStateException("无法读取所选文件")
+                // 压缩包必须是合法 ZIP
+                val entries = names.filterNot { is_junk_entry(it) }
+                if (entries.isEmpty()) throw IllegalStateException("压缩包为空或不是有效的 ZIP 文件")
+                val top_dirs = entries.filter { it.contains('/') }.map { it.substringBefore('/') }.toSet()
+                val has_top_files = entries.any { !it.contains('/') }
+                val wrapper = if (top_dirs.size == 1 && !has_top_files) top_dirs.first() else null
+                val root_prefix = wrapper?.let { "$it/" } ?: ""
+                val has_build_file = listOf("CMakeLists.txt", "Makefile", "makefile", "GNUmakefile")
+                    .any { entries.contains("$root_prefix$it") }
+                if (!has_build_file) {
+                    throw IllegalStateException("压缩包根下没有 CMakeLists.txt 或 Makefile，不是可导入的 C/C++ 项目")
+                }
+                wrapper to entries.size
+            }
+        }.getOrElse { error ->
+            on_log(error.message ?: "无法读取所选压缩包")
+            on_progress(100)
+            return false
+        }
+        val (wrapper, total) = scanned
+
+        val base_name = withContext(Dispatchers.IO) {
+            (zip_display_name(uri)?.substringBeforeLast(".zip") ?: wrapper)
+                ?.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                ?.replace(Regex("^[.]*"), "")
+                ?.ifBlank { null }
+                ?: "imported-project"
+        }
+        val project_dir = withContext(Dispatchers.IO) {
+            var candidate = File(projects_root, base_name)
+            var index = 1
+            while (candidate.exists()) {
+                candidate = File(projects_root, "${base_name}-${index++}")
+            }
+            candidate
+        }
+        on_log("导入：$base_name")
+        on_log("目标：${project_dir.name}")
+        on_log("共 $total 个文件")
+        on_progress(8)
+
+        val root_prefix = wrapper?.let { "$it/" } ?: ""
+        val copy_result = withContext(Dispatchers.IO) {
+            runCatching {
+                var copied = 0
+                contentResolver.openInputStream(uri)?.use { input ->
+                    ZipInputStream(input.buffered()).use { zip ->
+                        val project_root_path = project_dir.canonicalPath + File.separator
+                        while (true) {
+                            val entry = zip.nextEntry ?: break
+                            val name = entry.name
+                            if (entry.isDirectory || is_junk_entry(name) ||
+                                (root_prefix.isNotEmpty() && !name.startsWith(root_prefix))
+                            ) {
+                                zip.closeEntry()
+                                continue
+                            }
+                            val relative = name.removePrefix(root_prefix)
+                            val target = File(project_dir, relative)
+                            // zip-slip：拒绝越界路径
+                            if (!target.canonicalPath.startsWith(project_root_path)) {
+                                throw IllegalStateException("压缩包含非法路径: $name")
+                            }
+                            target.parentFile?.mkdirs()
+                            target.outputStream().use { output -> zip.copyTo(output) }
+                            zip.closeEntry()
+                            copied++
+                            on_progress(10 + (85.0 * copied / total).toInt())
+                        }
+                    }
+                } ?: throw IllegalStateException("无法读取所选文件")
+            }
+        }
+        if (copy_result.isFailure) {
+            on_progress(100)
+            on_log("解包失败：${copy_result.exceptionOrNull()?.message ?: "未知错误"}")
+            withContext(Dispatchers.IO) { project_dir.deleteRecursively() }
+            return false
+        }
+
+        on_progress(97)
+        val configured = withContext(Dispatchers.IO) {
+            project_manager.ensure_project_config(project_dir.absolutePath)
+        }
+        configured.onFailure { error ->
+            on_progress(100)
+            on_log(error.message ?: "项目配置初始化失败")
+            withContext(Dispatchers.IO) { project_dir.deleteRecursively() }
+            return false
+        }
+
+        val recent = project_manager.add_recent_project(project_dir.absolutePath)
+        recent.onFailure { error ->
+            on_progress(100)
+            on_log("项目加入最近列表失败: ${error.message}")
+            return false
+        }
+
+        on_progress(100)
+        reload_recent_projects()
+        on_log("导入完成：${project_dir.name}")
+        app_toast.show(this, "项目已导入: ${project_dir.name}", app_toast.LENGTH_SHORT)
+        // 导入的项目依赖未缓存，打开后自动 go mod tidy（与克隆一致）
+        open_editor(project_dir.name, project_dir.absolutePath, auto_tidy = true)
+        return true
+    }
+
+    /** macOS 打包工具塞进 zip 的垃圾条目。 */
+    private fun is_junk_entry(name: String): Boolean =
+        name.startsWith("__MACOSX/") || name.contains("/__MACOSX/") ||
+            name.substringAfterLast('/') == ".DS_Store"
+
+    /** 通过 SAF 查询所选文件显示名（用于 zip 导入的项目命名）。 */
+    private fun zip_display_name(uri: Uri): String? =
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+
+    private fun open_editor(project_name: String, project_path: String, auto_tidy: Boolean = false) {
+        project_manager.ensure_project_clang_format(project_path)
+        val intent = Intent(this, editor_activity::class.java).apply {
+            putExtra("project_name", project_name)
+            putExtra("project_path", project_path)
+            // 克隆的项目依赖未缓存，打开后自动 go mod tidy
+            if (auto_tidy) putExtra("auto_tidy", true)
+        }
+        startActivity(intent)
+    }
+
+    private suspend fun run_toolchain_task(
+        trigger: toolchain_trigger,
+        on_log: (String) -> Unit,
+        on_progress: (Int) -> Unit
+    ): Boolean {
+        return when (trigger.action) {
+            toolchain_action.INSTALL_CPP_TOOLCHAIN -> install_cpp_toolchain(on_log, on_progress)
+            toolchain_action.INSTALL_BUILD_BASE -> install_build_base(on_log, on_progress)
+            toolchain_action.INSTALL_CMAKE -> install_cmake(on_log, on_progress)
+            toolchain_action.INSTALL_CLANGD -> install_clangd(on_log, on_progress)
+            toolchain_action.INSTALL_CLANG_FORMAT -> install_clang_format(on_log, on_progress)
+            toolchain_action.INSTALL_GDB -> install_gdb(on_log, on_progress)
+            toolchain_action.INSTALL_GIT -> install_git(on_log, on_progress)
+        }
+    }
+
+    private fun on_toolchain_task_success(trigger: toolchain_trigger) {
+        toolchain_tasks = toolchain_tasks.drop(1)
+        // 工具链已变化，让 installed_cpp() 探测缓存失效（编辑器重组热路径依赖它）
+        toolchain_manager.invalidate_cpp_probe()
+        app_toast.show(this, "${trigger.title} 完成", app_toast.LENGTH_SHORT)
+        lifecycleScope.launch { refresh_toolchain_status() }
+    }
+
+    private fun recent_project_info.to_ui_recent_project(): recent_project {
+        return recent_project(
+            name = name,
+            path = path,
+            compiler_version = compiler_version,
+            last_opened = last_opened,
+            template = template,
+            build_system = build_system,
+            icon_path = ""
+        )
+    }
+}

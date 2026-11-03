@@ -94,6 +94,22 @@ zip -r ../cpp-skills.zip .
 
 当前应用 native 打包目标为 `arm64-v8a`。Gradle 版本由 wrapper 指定（9.2.1）。
 
+### 应用标识与自建服务（重要）
+
+- 包名 / applicationId：`com.xiaonai.cppstudio`（debug 版为 `com.xiaonai.cppstudio.debug`）
+- 应用自身的仓库地址、插件市场索引、崩溃上报/翻译后端，全部集中在
+  [`modules/editor-core/.../config/cppstudio_backend_config.kt`](modules/editor-core/src/main/kotlin/com/xiaonai/cppstudio/editor/config/cppstudio_backend_config.kt)：
+
+  ```kotlin
+  object cppstudio_backend_config {
+      const val GITHUB_REPO = ""               // 如 "yourname/CppStudio"，留空 = 关闭应用内更新
+      const val PLUGIN_MARKET_INDEX_URL = ""   // 插件市场索引直链，留空 = 关闭市场浏览
+      const val API_BASE_URL = ""              // 崩溃上报/文档翻译后端，留空 = 不上报、不翻译
+  }
+  ```
+
+  三项**默认全部留空**：此时应用不会向任何第三方服务器发送数据（更新检查、插件市场、崩溃上报都会提示"未配置"）。
+  想启用时填上自己的地址即可。
 ### 构建
 
 在仓库根目录创建 `local.properties` 指向本机 SDK（Android Studio 会自动生成）：

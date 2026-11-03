@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.jmwl.cppstudio.toolchain.runtime"
+    namespace = "com.xiaonai.cppstudio.toolchain.runtime"
     compileSdk = 36
 
     defaultConfig {

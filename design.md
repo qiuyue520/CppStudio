@@ -195,7 +195,7 @@ removed for this reason.
 
 ## Exports
 Drop-in formats for re-using this design system in other projects. The Kotlin
-source of truth is `app/src/main/kotlin/com/jmwl/cppstudio/ui/theme/color.kt`;
+source of truth is `app/src/main/kotlin/com/xiaonai/cppstudio/ui/theme/color.kt`;
 these are the portable mirrors.
 
 ### tokens.css

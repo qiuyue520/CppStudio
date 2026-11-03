@@ -8,12 +8,12 @@ plugins {
 }
 
 android {
-    namespace = "com.jmwl.cppstudio"
+    namespace = "com.xiaonai.cppstudio"
     compileSdk = 36
     ndkVersion = "27.2.12479018"
 
     defaultConfig {
-        applicationId = "com.jmwl.cppstudio"
+        applicationId = "com.xiaonai.cppstudio"
         minSdk = 26
         targetSdk = 28
         versionCode = 1

@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.jmwl.cppstudio.project_file_tree"
+    namespace = "com.xiaonai.cppstudio.project_file_tree"
     compileSdk = 36
 
     defaultConfig {
