@@ -76,6 +76,8 @@ jobs:
         if: env.TEST_APK_URL == ''
         run: |
           set -o pipefail
+          # Windows 上提交的文件没有执行位，Linux runner 上 ./gradlew 会 exit 126
+          chmod +x ./gradlew
           ./gradlew :app:assembleRelease --no-daemon 2>&1 | tee build.log
 
       # ===== 整理产物与版本信息（两种模式都跑）=====
