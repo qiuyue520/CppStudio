@@ -326,11 +326,11 @@ private fun editor_theme_preview_card(preview_palette: editor_theme_preview_pale
                     modifier = Modifier
                         .horizontalScroll(scroll_state)
                 ) {
-                    editor_theme_go_code_preview_page(
+                    editor_theme_cpp_code_preview_page(
                         preview_palette = preview_palette,
                         modifier = Modifier.width(page_width)
                     )
-                    editor_theme_go_mod_preview_page(
+                    editor_theme_cmake_preview_page(
                         preview_palette = preview_palette,
                         modifier = Modifier.width(page_width)
                     )
@@ -341,57 +341,80 @@ private fun editor_theme_preview_card(preview_palette: editor_theme_preview_pale
 }
 
 @Composable
-private fun editor_theme_go_code_preview_page(
+private fun editor_theme_cpp_code_preview_page(
     preview_palette: editor_theme_preview_palette,
     modifier: Modifier = Modifier
 ) {
     editor_theme_preview_code_page(
-        title = "Go",
+        title = "main.cpp",
         preview_palette = preview_palette,
         modifier = modifier
     ) { line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor ->
         editor_theme_preview_line("1", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_token("package", preview_palette.keyword)
+            append_token("#include", preview_palette.keyword)
             append_plain(" ", preview_palette.foreground)
-            append_token("main", preview_palette.type)
+            append_token("<iostream>", preview_palette.string)
         }
         editor_theme_preview_line("2", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_plain("", preview_palette.foreground)
+            append_token("#include", preview_palette.keyword)
+            append_plain(" ", preview_palette.foreground)
+            append_token("<string>", preview_palette.string)
         }
         editor_theme_preview_line("3", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_token("import", preview_palette.keyword)
-            append_plain(" ", preview_palette.foreground)
-            append_token("\"", preview_palette.string)
-            append_token("fmt", preview_palette.string)
-            append_token("\"", preview_palette.string)
-        }
-        editor_theme_preview_line("4", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
             append_plain("", preview_palette.foreground)
         }
-        editor_theme_preview_line("5", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_token("func", preview_palette.keyword)
+        editor_theme_preview_line("4", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+            append_token("int", preview_palette.type)
             append_plain(" ", preview_palette.foreground)
             append_token("main", preview_palette.function)
-            append_token("()", preview_palette.punctuation)
+            append_token("(int argc, char** argv)", preview_palette.punctuation)
             append_plain(" ", preview_palette.foreground)
             append_token("{", preview_palette.punctuation)
         }
-        editor_theme_preview_line("6", true, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_plain("  ", preview_palette.foreground)
-            append_token("msg", preview_palette.foreground)
+        editor_theme_preview_line("5", true, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+            append_plain("    ", preview_palette.foreground)
+            append_token("std", preview_palette.type)
+            append_token("::", preview_palette.punctuation)
+            append_token("string", preview_palette.type)
+            append_plain(" who ", preview_palette.foreground)
+            append_token("=", preview_palette.operator)
+            append_plain(" argc ", preview_palette.foreground)
+            append_token(">", preview_palette.operator)
             append_plain(" ", preview_palette.foreground)
-            append_token(":=", preview_palette.operator)
+            append_token("1", preview_palette.number)
             append_plain(" ", preview_palette.foreground)
-            append_token("\"", preview_palette.string)
-            append_token("Hello, Go!", preview_palette.string)
-            append_token("\"", preview_palette.string)
+            append_token("?", preview_palette.operator)
+            append_plain(" argv", preview_palette.foreground)
+            append_token("[1]", preview_palette.punctuation)
+            append_plain(" ", preview_palette.foreground)
+            append_token(":", preview_palette.operator)
+            append_plain(" ", preview_palette.foreground)
+            append_token("\"C++\"", preview_palette.string)
+            append_token(";", preview_palette.punctuation)
+        }
+        editor_theme_preview_line("6", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+            append_plain("    ", preview_palette.foreground)
+            append_token("std", preview_palette.type)
+            append_token("::", preview_palette.punctuation)
+            append_token("cout", preview_palette.type)
+            append_plain(" ", preview_palette.foreground)
+            append_token("<<", preview_palette.operator)
+            append_plain(" ", preview_palette.foreground)
+            append_token("\"Hello, \"", preview_palette.string)
+            append_plain(" ", preview_palette.foreground)
+            append_token("<<", preview_palette.operator)
+            append_plain(" who ", preview_palette.foreground)
+            append_token("<<", preview_palette.operator)
+            append_plain(" ", preview_palette.foreground)
+            append_token("'\\n'", preview_palette.string)
+            append_token(";", preview_palette.punctuation)
         }
         editor_theme_preview_line("7", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_plain("  ", preview_palette.foreground)
-            append_token("fmt", preview_palette.type)
-            append_token(".", preview_palette.punctuation)
-            append_token("Println", preview_palette.function)
-            append_token("(msg)", preview_palette.punctuation)
+            append_plain("    ", preview_palette.foreground)
+            append_token("return", preview_palette.keyword)
+            append_plain(" ", preview_palette.foreground)
+            append_token("0", preview_palette.number)
+            append_token(";", preview_palette.punctuation)
         }
         editor_theme_preview_line("8", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
             append_token("}", preview_palette.punctuation)
@@ -400,7 +423,7 @@ private fun editor_theme_go_code_preview_page(
 }
 
 @Composable
-private fun editor_theme_go_mod_preview_page(
+private fun editor_theme_cmake_preview_page(
     preview_palette: editor_theme_preview_palette,
     modifier: Modifier = Modifier
 ) {
@@ -410,33 +433,59 @@ private fun editor_theme_go_mod_preview_page(
         modifier = modifier
     ) { line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor ->
         editor_theme_preview_line("1", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_token("module", preview_palette.keyword)
+            append_token("cmake_minimum_required", preview_palette.function)
+            append_token("(", preview_palette.punctuation)
+            append_token("VERSION", preview_palette.constant)
             append_plain(" ", preview_palette.foreground)
-            append_token("github.com/user/demo", preview_palette.string)
+            append_token("3.22", preview_palette.number)
+            append_token(")", preview_palette.punctuation)
         }
-        editor_theme_preview_line("2", true, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+        editor_theme_preview_line("2", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
             append_plain("", preview_palette.foreground)
         }
         editor_theme_preview_line("3", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_token("go", preview_palette.keyword)
+            append_token("project", preview_palette.function)
+            append_token("(", preview_palette.punctuation)
+            append_plain("demo ", preview_palette.foreground)
+            append_token("LANGUAGES", preview_palette.constant)
             append_plain(" ", preview_palette.foreground)
-            append_token("1.21", preview_palette.number)
+            append_token("CXX", preview_palette.type)
+            append_token(")", preview_palette.punctuation)
         }
-        editor_theme_preview_line("4", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_plain("", preview_palette.foreground)
+        editor_theme_preview_line("4", true, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+            append_token("set", preview_palette.function)
+            append_token("(", preview_palette.punctuation)
+            append_plain("CMAKE_CXX_STANDARD ", preview_palette.foreground)
+            append_token("17", preview_palette.number)
+            append_token(")", preview_palette.punctuation)
         }
         editor_theme_preview_line("5", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_token("require", preview_palette.keyword)
-            append_plain(" ", preview_palette.foreground)
-            append_token("(", preview_palette.punctuation)
+            append_token("#", preview_palette.comment)
+            append_plain(" 导出编译数据库，供 clangd 使用", preview_palette.comment)
         }
         editor_theme_preview_line("6", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
-            append_plain("  ", preview_palette.foreground)
-            append_token("github.com/gin-gonic/gin", preview_palette.string)
-            append_plain(" ", preview_palette.foreground)
-            append_token("v1.9.1", preview_palette.number)
+            append_token("set", preview_palette.function)
+            append_token("(", preview_palette.punctuation)
+            append_plain("CMAKE_EXPORT_COMPILE_COMMANDS ", preview_palette.foreground)
+            append_token("ON", preview_palette.constant)
+            append_token(")", preview_palette.punctuation)
         }
         editor_theme_preview_line("7", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+            append_plain("", preview_palette.foreground)
+        }
+        editor_theme_preview_line("8", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+            append_token("add_executable", preview_palette.function)
+            append_token("(", preview_palette.punctuation)
+            append_plain("demo main.cpp", preview_palette.foreground)
+            append_token(")", preview_palette.punctuation)
+        }
+        editor_theme_preview_line("9", false, line_number_color, active_line_number_color, line_highlight, selection, block_line, indent_line, cursor) {
+            append_token("target_link_libraries", preview_palette.function)
+            append_token("(", preview_palette.punctuation)
+            append_plain("demo ", preview_palette.foreground)
+            append_token("PRIVATE", preview_palette.constant)
+            append_plain(" ", preview_palette.foreground)
+            append_token("fmt::fmt", preview_palette.type)
             append_token(")", preview_palette.punctuation)
         }
     }

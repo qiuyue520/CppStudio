@@ -32,18 +32,18 @@ internal data class editor_settings_text_group(
 internal fun editor_settings_text_groups(settings: editor_settings_state): List<editor_settings_text_group> {
     return listOf(
         editor_settings_text_group(
-            title = "中文函数提示",
+            title = "中文函数提示（需自建翻译服务）",
             items = listOf(
                 editor_settings_text_item(
-                    title = "后端地址",
-                    description = "例如 http://192.168.1.10:8080",
+                    title = "翻译服务地址",
+                    description = "把英文函数说明翻译成中文的服务地址；留空 = 不翻译",
                     value = settings.clangd_translation_endpoint,
                     placeholder = "http://192.168.1.10:8080",
                     update = { value -> settings.copy(clangd_translation_endpoint = value) }
                 ),
                 editor_settings_text_item(
-                    title = "后端密钥",
-                    description = "未启用后端鉴权时可留空",
+                    title = "服务鉴权密钥",
+                    description = "服务端要求鉴权时填，没开鉴权可留空",
                     value = settings.clangd_translation_api_key,
                     placeholder = "可选",
                     secret = true,
@@ -211,7 +211,7 @@ internal fun editor_settings_switch_groups(settings: editor_settings_state): Lis
                 ),
                 editor_settings_switch_item(
                     title = "中文文档翻译",
-                    description = "通过自建后端翻译函数说明",
+                    description = "把悬停看到的英文文档发到上面的服务转成中文（需先填地址）",
                     checked = settings.clangd_translate_documentation,
                     update = { value -> settings.copy(clangd_translate_documentation = value) }
                 )
