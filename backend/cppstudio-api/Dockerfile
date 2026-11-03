@@ -7,7 +7,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/cppstudio-api ./cm
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/cppstudio-api /cppstudio-api
-ENV GOSTUDIO_API_ADDR=:8080 GOSTUDIO_API_DATA_DIR=/data
+ENV CPPSTUDIO_API_ADDR=:8080 CPPSTUDIO_API_DATA_DIR=/data
 EXPOSE 8080
 VOLUME ["/data"]
 USER nonroot:nonroot
