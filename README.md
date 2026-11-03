@@ -127,6 +127,26 @@ sdk.dir=/path/to/Android/Sdk
 ```
 
 首次构建会下载 Gradle 发行版与依赖，之后是增量构建。
+### 发布（GitHub Actions）
+
+推送 `v*` tag 会触发 [`.github/workflows/release.yml`](.github/workflows/release.yml)：
+在 `ubuntu-latest` 上装配 NDK 27.2 + SDK CMake 3.22.1 → `assembleRelease`（R8 压缩）→
+创建 GitHub Release 并上传 `CppStudio-v<版本>.apk`。
+
+```bash
+git tag -a v0.1.1 -m "CppStudio v0.1.1" && git push origin v0.1.1
+```
+
+签名走仓库 Secrets（不配置则回退 debug 签名，产物同样可安装）：
+
+| Secret | 说明 |
+|---|---|
+| `CPPSTUDIO_KEYSTORE_BASE64` | 发布签名 jks 的 base64（`base64 -w0 release.jks`） |
+| `CPPSTUDIO_KEYSTORE_ALIAS` | key 别名 |
+| `CPPSTUDIO_KEY_PASSWORD` | key 密码 |
+| `CPPSTUDIO_STORE_PASSWORD` | keystore 密码 |
+
+另有可选的 `WEBHOOK_URL`（QQ 群通知，未配置则跳过）。
 
 也可以使用 Android Studio 打开仓库根目录，然后运行 `app` 配置。
 
