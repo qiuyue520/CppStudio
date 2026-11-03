@@ -94,22 +94,22 @@ fun splash_content(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "Go",
+                text = "Cpp",
                 fontSize = 48.sp,
                 fontWeight = FontWeight.Black,
                 color = colors.title_highlight,
-                letterSpacing = 4.sp,
+                letterSpacing = 3.sp,
                 modifier = Modifier.graphicsLayer(scaleX = scale, scaleY = scale)
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Studio",
-                fontSize = 18.sp,
+                text = "Studio  ·  C/C++ IDE",
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.subtitle,
-                letterSpacing = 2.sp,
+                letterSpacing = 1.5.sp,
                 modifier = Modifier.alpha(alpha)
             )
 
