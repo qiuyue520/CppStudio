@@ -64,13 +64,14 @@ jobs:
         if: env.TEST_APK_URL == ''
         env:
           KEYSTORE_BASE64: ${{ secrets.CPPSTUDIO_KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.CPPSTUDIO_KEY_ALIAS }}
+          KEY_ALIAS: ${{ secrets.CPPSTUDIO_KEYSTORE_ALIAS }}
           KEY_PASSWORD: ${{ secrets.CPPSTUDIO_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.CPPSTUDIO_STORE_PASSWORD }}
         run: |
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > cppstudio-release.keystore
           printf 'CPPSTUDIO_KEYSTORE_PATH=cppstudio-release.keystore\nCPPSTUDIO_KEY_ALIAS=%s\nCPPSTUDIO_KEY_PASSWORD=%s\nCPPSTUDIO_STORE_PASSWORD=%s\n' \
-            "$KEY_ALIAS" "$KEY_PASSWORD" "$STORE_PASSWORD" > local.properties
+            "${KEY_ALIAS:-cppstudio}" "$KEY_PASSWORD" "$STORE_PASSWORD" > local.properties
+          echo "keystore bytes: $(stat -c%s cppstudio-release.keystore)"
 
       - name: 构建 Release APK
         if: env.TEST_APK_URL == ''
