@@ -33,6 +33,7 @@ fun editor_settings_panel(
     on_settings_change: (editor_settings_state) -> Unit,
     on_import_font: () -> Unit,
     on_open_theme_settings: () -> Unit,
+    on_test_translation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = app_theme_provider.colors
@@ -143,10 +144,22 @@ fun editor_settings_panel(
                         value = item.value,
                         placeholder = item.placeholder,
                         secret = item.secret,
-                        on_value_change = item.update
+                        // 注意：item.update 只是「算出新的 settings」，必须交回上层保存，
+                        // 之前直接把它当回调传下去、结果被丢弃，输入框就成了只读（打一个字就被冲掉）
+                        on_value_change = { next -> on_settings_change(item.update(next)) }
                     )
                 }
             }
+        }
+
+        if (text_groups.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            editor_settings_navigation_card(
+                icon = Icons.Default.PlayArrow,
+                title = "测试翻译服务",
+                description = "发一句样例给上面配置的服务，验证地址和密钥能不能通",
+                on_click = on_test_translation
+            )
         }
     }
 }
@@ -301,7 +314,7 @@ private fun editor_settings_text_card(
     value: String,
     placeholder: String,
     secret: Boolean,
-    on_value_change: (String) -> editor_settings_state
+    on_value_change: (String) -> Unit
 ) {
     val colors = app_theme_provider.colors
     var secret_visible by remember { mutableStateOf(false) }

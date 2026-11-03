@@ -31,7 +31,7 @@ data class editor_settings_state(
     val clangd_hover: Boolean = true,
     // 默认关闭：文档翻译需要一个自己搭的翻译服务（见 cppstudio_backend_config.API_BASE_URL），没有就别开
     val clangd_translate_documentation: Boolean = false,
-    val clangd_translation_endpoint: String = cppstudio_backend_config.TRANSLATION_BASE_URL,
+    val clangd_translation_endpoint: String = cppstudio_backend_config.TRANSLATION_ENDPOINT_DEFAULT,
     val clangd_translation_api_key: String = cppstudio_backend_config.TRANSLATION_BACKEND_KEY,
     val pack_auto_install: Boolean = true,
     val font_ligatures: Boolean = true,

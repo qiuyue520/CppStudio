@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -321,9 +322,25 @@ fun crash_screen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ===== 主操作：上报 =====
+        // ===== 主操作：上报（没配后端时改为去 GitHub 提 Issue） =====
+        val backend_ready = crash_reporter.is_configured
         Button(
-            onClick = { submit_report() },
+            onClick = {
+                if (backend_ready) {
+                    submit_report()
+                } else {
+                    val url = crash_reporter.issues_url
+                    if (url == null) {
+                        app_toast.show(context, "未配置反馈渠道", app_toast.LENGTH_LONG)
+                    } else {
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                        }.onFailure {
+                            app_toast.show(context, "打不开浏览器：${it.message.orEmpty()}", app_toast.LENGTH_LONG)
+                        }
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
@@ -340,12 +357,16 @@ fun crash_screen(
             when (val state = report_state) {
                 is report_step.idle -> {
                     Icon(
-                        imageVector = Icons.Default.BugReport,
+                        imageVector = if (backend_ready) Icons.Default.BugReport else Icons.Default.OpenInNew,
                         contentDescription = null,
                         modifier = Modifier.size(17.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("上报错误", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = if (backend_ready) "上报错误" else "去 GitHub 提 Issue",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
                 is report_step.sending -> {
                     CircularProgressIndicator(
@@ -374,6 +395,17 @@ fun crash_screen(
                     Text("上报失败：${state.message.take(40)}，点此重试", fontSize = 13.sp)
                 }
             }
+        }
+
+        if (!backend_ready) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "当前没有反馈后端（cppstudio_backend_config.API_BASE_URL 留空）：点上面的按钮会打开 " +
+                    "GitHub Issues，把「复制日志」的内容粘过去就行。想启用应用内上报，需要在配置里填一个自建后端地址。",
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+                color = colors.subtitle
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))

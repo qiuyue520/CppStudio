@@ -59,6 +59,26 @@ fun editor_settings_screen(
         save_editor_settings(context, next_settings)
     }
 
+    /** 用当前地址/密钥发一句样例，验证翻译服务能不能通。 */
+    fun test_translation() {
+        val endpoint = settings.clangd_translation_endpoint.trim().trimEnd('/')
+        if (endpoint.isBlank()) {
+            app_toast.show(context, "先填「翻译服务地址」再测试", app_toast.LENGTH_SHORT)
+            return
+        }
+        app_toast.show(context, "正在测试翻译服务…", app_toast.LENGTH_SHORT)
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { probe_translation_service(endpoint, settings.clangd_translation_api_key) }
+            }
+            result.onSuccess { text ->
+                app_toast.show(context, "服务可用：$text", app_toast.LENGTH_LONG)
+            }.onFailure { error ->
+                app_toast.show(context, "连接失败：${error.message.orEmpty()}", app_toast.LENGTH_LONG)
+            }
+        }
+    }
+
     val import_font_launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -99,8 +119,49 @@ fun editor_settings_screen(
                 on_settings_change = ::update_settings,
                 on_import_font = { import_font_launcher.launch("font/*") },
                 on_open_theme_settings = on_theme_click,
+                on_test_translation = ::test_translation,
                 modifier = Modifier.fillMaxSize()
             )
         }
+    }
+}
+
+/**
+ * 给配置好的翻译服务发一句样例，验证地址 + 密钥是否可用。
+ * 与 `clangd_documentation_translator` 用同一套接口约定：POST {地址}/v1/translate。
+ * 成功时返回一句提示（含译文片段），失败抛出带原因的异常。
+ */
+private fun probe_translation_service(endpoint: String, api_key: String): String {
+    val url = java.net.URL("$endpoint/v1/translate")
+    val connection = url.openConnection() as java.net.HttpURLConnection
+    try {
+        connection.requestMethod = "POST"
+        connection.connectTimeout = 8000
+        connection.readTimeout = 20000
+        connection.doOutput = true
+        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        if (api_key.isNotBlank()) {
+            connection.setRequestProperty("X-CppStudio-Translation-Key", api_key)
+        }
+        val payload = org.json.JSONObject()
+            .put("text", "Returns the number of elements in the container.")
+            .put("target_language", "zh-CN")
+            .put("kind", "clangd-hover")
+            .toString()
+            .toByteArray(Charsets.UTF_8)
+        connection.setFixedLengthStreamingMode(payload.size)
+        connection.outputStream.use { it.write(payload) }
+
+        val status = connection.responseCode
+        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+        val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        if (status !in 200..299) {
+            throw IllegalStateException("HTTP $status ${body.take(120)}")
+        }
+        val translated = org.json.JSONObject(body).optString("translated_text").trim()
+        if (translated.isBlank()) throw IllegalStateException("返回里没有 translated_text")
+        return translated.take(24)
+    } finally {
+        connection.disconnect()
     }
 }

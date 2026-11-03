@@ -18,8 +18,16 @@ object cppstudio_backend_config {
     /** 插件市场索引（raw JSON）。留空 = 插件页「浏览」提示未配置。 */
     const val PLUGIN_MARKET_INDEX_URL = ""
 
-    /** 后端根地址。留空 = 不上报崩溃、不做文档翻译。 */
+    /** 后端根地址。留空 = 不上报崩溃。 */
     const val API_BASE_URL = ""
+
+    /**
+     * 文档翻译服务地址（独立部署，可在「编辑器设置 → 中文函数提示」里随时改）。
+     * 本项目自建实例：EdgeOne 部署，国内直连可用；服务端代码见
+     * https://github.com/qiuyue520/translation-api
+     * 留空则输入框为空、翻译功能需要自己填。
+     */
+    const val TRANSLATION_ENDPOINT_DEFAULT = "https://translate-cn.xiaonai.top/api"
 
     /** 翻译接口（后端实现时填全，留空则编辑器文档翻译走原文）。 */
     val TRANSLATION_BASE_URL: String =

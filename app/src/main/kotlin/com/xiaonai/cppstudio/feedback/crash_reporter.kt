@@ -39,6 +39,17 @@ object crash_reporter {
 
     private const val max_payload_chars = 32 * 1024
 
+    /** 有没有配置反馈后端（cppstudio_backend_config.API_BASE_URL）。没配置时页面引导去 GitHub Issues。 */
+    val is_configured: Boolean
+        get() = base_url().isNotBlank()
+
+    /** 没配置后端时的去处：仓库的 Issues 新建页；没配仓库地址就返回 null。 */
+    val issues_url: String?
+        get() {
+            val repo = com.xiaonai.cppstudio.editor.config.cppstudio_backend_config.GITHUB_REPO.trim()
+            return if (repo.isBlank()) null else "https://github.com/$repo/issues/new"
+        }
+
     private val json_media_type = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()
@@ -58,7 +69,7 @@ object crash_reporter {
         comment: String
     ): crash_report_result = withContext(Dispatchers.IO) {
         if (base_url().isBlank()) {
-            throw IllegalStateException("崩溃上报后端未配置（cppstudio_backend_config.API_BASE_URL 留空）")
+            throw IllegalStateException("未配置反馈后端：请用下方按钮到 GitHub Issues 提交（或把日志复制后粘贴过去）")
         }
         val payload = JSONObject().apply {
             put("device_id", feedback_settings_store.device_id(context))
@@ -97,7 +108,7 @@ object crash_reporter {
         withContext(Dispatchers.IO) {
             if (base_url().isBlank()) {
                 throw IllegalStateException(
-                    "后端未配置（cppstudio_backend_config.API_BASE_URL 留空），无历史反馈"
+                    "未配置反馈后端，查不到历史记录（这项需要自建后端：cppstudio_backend_config.API_BASE_URL）"
                 )
             }
             val url = base_url() + "/v1/reports?device_id=" +
