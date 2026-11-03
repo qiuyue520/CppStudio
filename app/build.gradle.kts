@@ -16,8 +16,8 @@ android {
         applicationId = "com.xiaonai.cppstudio"
         minSdk = 26
         targetSdk = 28
-        versionCode = 5
-        versionName = "0.1.4"
+        versionCode = 6
+        versionName = "0.1.5"
 
         ndk {
             abiFilters.add("arm64-v8a")

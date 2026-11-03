@@ -186,6 +186,9 @@ CI 签名用仓库 Secrets（未配置则回退 debug 签名）：
 
 另有可选的 `WEBHOOK_URL`（自定义构建通知，未配置则跳过）。
 
+应用内的「检查更新」走 `github.com/<repo>/releases/latest` 的 302 与发布页资源列表解析，
+**不消耗 GitHub API 配额**（未认证 API 每小时只有 60 次，超了会返回 403，手机上很常见）。
+
 当前发布包签名证书指纹（SHA-256，可用 `apksigner verify --print-certs` 核对）：
 
 ```text

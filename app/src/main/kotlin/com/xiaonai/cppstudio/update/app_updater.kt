@@ -75,6 +75,14 @@ class app_update_controller(private val context: Context) {
         .connectTimeout(12, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .build()
+
+    /** 不跟随跳转的客户端：用来读 `releases/latest` 的 302 Location，拿到当前 tag。 */
+    private val no_redirect_http = OkHttpClient.Builder()
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .build()
     private val prefs = context.getSharedPreferences("app_update_prefs", Context.MODE_PRIVATE)
 
     var step: app_update_step by mutableStateOf(app_update_step.Idle)
@@ -95,25 +103,15 @@ class app_update_controller(private val context: Context) {
                     "未配置更新源：在 cppstudio_backend_config.GITHUB_REPO 填入你的仓库（owner/name）"
                 )
             }
-            val request = Request.Builder()
-                .url("https://api.github.com/repos/$REPO/releases/latest")
-                .header("Accept", "application/vnd.github+json")
-                .build()
-            http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw IllegalStateException("GitHub 返回 ${response.code}")
-                }
-                val body = response.body?.string().orEmpty()
-                val info = parse_release(body)
-                    ?: throw IllegalStateException("最新 Release 未找到 APK 安装包")
-                if (!is_newer_version(info.tag, local_version)) {
-                    app_update_check_result.UpToDate
-                } else if (auto && is_version_dismissed(info.tag)) {
-                    app_update_check_result.UpToDate
-                } else {
-                    step = app_update_step.Available(info)
-                    app_update_check_result.UpdateAvailable(info)
-                }
+            // 优先走网页（不消耗 GitHub API 配额）：未认证的 REST API 只有 60 次/小时，超了就是 403
+            val info = runCatching { fetch_latest_via_web() }.getOrNull() ?: fetch_latest_via_api()
+            if (!is_newer_version(info.tag, local_version)) {
+                app_update_check_result.UpToDate
+            } else if (auto && is_version_dismissed(info.tag)) {
+                app_update_check_result.UpToDate
+            } else {
+                step = app_update_step.Available(info)
+                app_update_check_result.UpdateAvailable(info)
             }
         }.getOrElse { error ->
             app_update_check_result.Error(error.message ?: "网络请求失败")
@@ -230,6 +228,73 @@ class app_update_controller(private val context: Context) {
 
     fun shutdown() {
         scope.cancel()
+    }
+
+    /**
+     * 不走 GitHub REST API 的检查路径。
+     *
+     * 未认证的 `api.github.com` 按 IP 限流 60 次/小时，超了直接 403（手机上因为走运营商
+     * NAT、出口 IP 共享，很容易踩到）。这里改成纯网页请求：
+     *   1. `releases/latest` 会 302 到 `/releases/tag/<tag>`，读 Location 拿 tag
+     *   2. `releases/expanded_assets/<tag>` 是发布页里资源列表的 HTML 片段，从中取 .apk 链接
+     * 两条都不消耗 API 配额，也不会 403。
+     */
+    private fun fetch_latest_via_web(): app_update_info? {
+        val user_agent = "CppStudio/${current_version_name(context)}"
+
+        val latest = Request.Builder()
+            .url("https://github.com/$REPO/releases/latest")
+            .header("User-Agent", user_agent)
+            .build()
+        val tag = no_redirect_http.newCall(latest).execute().use { response ->
+            if (response.code !in 300..399) return null
+            val location = response.header("Location").orEmpty()
+            Regex("/releases/tag/([^/?#]+)").find(location)?.groupValues?.get(1)
+        } ?: return null
+
+        val assets_page = Request.Builder()
+            .url("https://github.com/$REPO/releases/expanded_assets/$tag")
+            .header("User-Agent", user_agent)
+            .build()
+        val html = http.newCall(assets_page).execute().use { response ->
+            if (!response.isSuccessful) return null
+            response.body?.string().orEmpty()
+        }
+
+        val href = Regex("href=\"([^\"]*/releases/download/[^\"]+\\.apk)\"")
+            .find(html)?.groupValues?.get(1) ?: return null
+        val apk_url = if (href.startsWith("http")) href else "https://github.com$href"
+        val apk_name = apk_url.substringAfterLast('/')
+
+        return app_update_info(
+            tag = tag,
+            title = "CppStudio $tag",
+            release_notes = "前往发布页面查看更新说明：https://github.com/$REPO/releases/tag/$tag",
+            apk_url = apk_url,
+            apk_name = apk_name,
+            size_bytes = 0L
+        )
+    }
+
+    /** 网页路径失败时的兜底：仍然用 REST API（可能撞上 403 限流）。 */
+    private fun fetch_latest_via_api(): app_update_info {
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$REPO/releases/latest")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "CppStudio/${current_version_name(context)}")
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (response.code == 403 || response.code == 429) {
+                throw IllegalStateException(
+                    "GitHub 接口被限流（HTTP ${response.code}），网络出口 IP 共享时常见，稍后再试即可"
+                )
+            }
+            if (!response.isSuccessful) {
+                throw IllegalStateException("GitHub 返回 ${response.code}")
+            }
+            val body = response.body?.string().orEmpty()
+            return parse_release(body) ?: throw IllegalStateException("最新 Release 未找到 APK 安装包")
+        }
     }
 
     private fun parse_release(body: String): app_update_info? {
