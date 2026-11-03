@@ -13,7 +13,7 @@ package com.xiaonai.cppstudio.editor.config
 object cppstudio_backend_config {
 
     /** 形如 "yourname/CppStudio"。留空 = 关闭应用内更新、关于页源码/反馈/发布链接。 */
-    const val GITHUB_REPO = ""
+    const val GITHUB_REPO = "qiuyue520/CppStudio"
 
     /** 插件市场索引（raw JSON）。留空 = 插件页「浏览」提示未配置。 */
     const val PLUGIN_MARKET_INDEX_URL = ""

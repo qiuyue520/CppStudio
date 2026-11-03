@@ -60,7 +60,14 @@ android {
         val keyPassword = signProps?.getProperty("CPPSTUDIO_KEY_PASSWORD")
         val storePassword = signProps?.getProperty("CPPSTUDIO_STORE_PASSWORD")
 
-        if (storePath != null && keyAlias != null && keyPassword != null && storePassword != null) {
+        // 用 isNullOrBlank 而不是判空：CI 在没有配置 secrets 时会写入空值的 local.properties，
+        // 空密码 + 空 keystore 会让签名阶段直接失败，这里直接当作「未配置」处理。
+        if (
+            !storePath.isNullOrBlank() &&
+            !keyAlias.isNullOrBlank() &&
+            !keyPassword.isNullOrBlank() &&
+            !storePassword.isNullOrBlank()
+        ) {
             create("release") {
                 this.keyAlias = keyAlias
                 this.keyPassword = keyPassword
@@ -78,7 +85,8 @@ android {
 
         getByName("release") {
             // 仅在 release 签名配置存在时才启用签名，否则使用 debug 签名（降级）
-            signingConfig = signingConfigs.findByName("release")
+            // 没有 release 签名配置时退回 debug 签名，保证产物可直接安装（而不是 unsigned 装不上）
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             // R8 裁剪 + 资源收缩：keep 规则见 proguard-rules.pro
             isMinifyEnabled = true
             isShrinkResources = true
