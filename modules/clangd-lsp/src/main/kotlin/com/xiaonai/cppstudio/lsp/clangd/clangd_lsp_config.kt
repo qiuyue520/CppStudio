@@ -49,6 +49,10 @@ data class clangd_lsp_config(
      * - `--background-index`：后台索引整个项目（跨文件跳转、补全质量关键）
      * - `--pch-storage=memory`：手机上避免写大量 PCH 文件
      * - `--header-insertion=never`：不在补全时自动插 #include（手机屏幕小，避免误触）
+     * - `--function-arg-placeholders=1`：补全时把参数名作为占位符填进去。
+     *   注意这个选项**必须带值**（0/1），只写选项名 clangd 会直接报
+     *   `for the --function-arg-placeholders option: requires a value!` 然后退出，
+     *   表现为「clangd 正在连接 → 已断开 → 连接失败」。
      * - `--log=error`：只把错误写进输出面板
      */
     fun arguments(): List<String> {
@@ -60,7 +64,7 @@ data class clangd_lsp_config(
             "--log=error",
             "--limit-results=100",
             "--completion-style=detailed",
-            "--function-arg-placeholders"
+            "--function-arg-placeholders=1"
         )
         return listOf(clangd_command) + defaults + extra_arguments
     }

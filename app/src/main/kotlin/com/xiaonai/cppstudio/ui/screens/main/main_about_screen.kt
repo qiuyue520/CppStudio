@@ -69,22 +69,16 @@ fun main_about_screen(
             ) {
                 Surface(
                     modifier = Modifier.size(88.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(20.dp),
                     color = colors.card_bg
                 ) {
-                    // 软件启动图标：背景铺满 + 前景放大 1.35×（抵消前景 PNG 自带安全边距），超出部分由 Surface 圆角裁掉
-                    Box(contentAlignment = Alignment.Center) {
-                        Image(
-                            painter = painterResource(R.drawable.ic_launcher_background),
-                            contentDescription = null,
-                            modifier = Modifier.matchParentSize()
-                        )
-                        Image(
-                            painter = painterResource(R.mipmap.ic_launcher_foreground),
-                            contentDescription = "CppStudio",
-                            modifier = Modifier.size(120.dp)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(R.drawable.ic_cppstudio_avatar),
+                        contentDescription = "CppStudio",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(20.dp))
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -116,7 +110,7 @@ fun main_about_screen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "by yitong",
+                    text = "by qiuyue520",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.title_highlight
@@ -169,9 +163,56 @@ fun main_about_screen(
                 rows = links
             )
 
+            Spacer(modifier = Modifier.height(26.dp))
+
+            about_section_title("这是什么", colors)
+            about_paragraph(
+                "CppStudio 是一个跑在 Android 手机 / 平板上的 C/C++ 开发环境：写代码、CMake 构建、clangd 补全与诊断、在终端里运行，全部在本地完成，不需要连电脑。\n" +
+                    "随手写点 C/C++、刷题、验证算法，或者手边没有电脑时改几行代码，都能直接用。",
+                colors
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            about_section_title("技术栈", colors)
+            about_paragraph(
+                "编辑器：sora-editor + TextMate 语法高亮（C / C++ / CMake / JSON）\n" +
+                    "语言服务：clangd，读 CMake 导出的 compile_commands.json\n" +
+                    "工具链：proot + Alpine rootfs 内的 build-base / cmake / clang / gdb / git\n" +
+                    "界面：Kotlin + Jetpack Compose，浅紫配色",
+                colors
+            )
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            about_section_title("致谢", colors)
+            about_paragraph(
+                "应用骨架来自 by-yitong 的 GoStudio（MIT），其编辑器与 proot 运行时源自 xiaochenzaine 的 XCode。\n" +
+                    "本版本把语言层整体换成了 C/C++，并补上了 CMake 工程模型、库管理与 clangd 支持。\n" +
+                    "本项目是个人二次开发版本，与上游作者没有隶属关系。",
+                colors
+            )
+
             Spacer(modifier = Modifier.height(38.dp))
         }
     }
+}
+
+/** 关于页正文段落。 */
+@Composable
+private fun about_paragraph(
+    text: String,
+    colors: app_colors
+) {
+    Text(
+        text = text,
+        fontSize = 12.sp,
+        lineHeight = 19.sp,
+        color = colors.card_text_subtitle,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 2.dp)
+    )
 }
 
 @Composable
